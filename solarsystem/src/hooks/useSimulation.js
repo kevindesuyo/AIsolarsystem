@@ -36,7 +36,7 @@ function useSimulation(canvasRef) {
       };
       // 太陽画像のロード
       const sunImg = new Image();
-      sunImg.src = '/planets/sun.png';
+      sunImg.src = '/planets/sun.jpg';
       sunImg.onload = () => {
         sunRef.current.image = sunImg;
       };
@@ -50,7 +50,7 @@ function useSimulation(canvasRef) {
       // 惑星画像のロード
       planetsRef.current.forEach(p => {
         const img = new Image();
-        img.src = `/planets/${p.name.toLowerCase()}.png`;
+        img.src = `/planets/${p.name.toLowerCase()}.jpg`;
         img.onload = () => {
           p.image = img;
         };

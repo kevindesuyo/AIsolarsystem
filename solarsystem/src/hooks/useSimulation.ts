@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { drawSolarSystem } from '../canvas/draw';
 
-function useSimulation(canvasRef) {
+function useSimulation(canvasRef: any) {
   const [timeScale, setTimeScale] = useState(1);
   const [, setIsRunning] = useState(true);
 
@@ -14,8 +14,8 @@ function useSimulation(canvasRef) {
   const timeScaleRef = useRef(1);
   const isRunningRef = useRef(true);
 
-  const sunRef = useRef(null);
-  const planetsRef = useRef(null);
+  const sunRef = useRef<any | null>(null);
+  const planetsRef = useRef<any | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;

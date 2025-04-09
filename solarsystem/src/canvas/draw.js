@@ -14,16 +14,26 @@ export function drawSolarSystem(ctx, width, height, sun, planets, G, timeScaleRe
   }
 
   // 太陽
-  ctx.beginPath();
-  ctx.arc(
-    (sun.x - centerX) * zoom + width / 2,
-    (sun.y - centerY) * zoom + height / 2,
-    sun.radius * zoom,
-    0,
-    Math.PI * 2
-  );
-  ctx.fillStyle = sun.color;
-  ctx.fill();
+  if (sun.image && sun.image.complete) {
+    ctx.drawImage(
+      sun.image,
+      (sun.x - centerX) * zoom + width / 2 - sun.radius * zoom,
+      (sun.y - centerY) * zoom + height / 2 - sun.radius * zoom,
+      sun.radius * 2 * zoom,
+      sun.radius * 2 * zoom
+    );
+  } else {
+    ctx.beginPath();
+    ctx.arc(
+      (sun.x - centerX) * zoom + width / 2,
+      (sun.y - centerY) * zoom + height / 2,
+      sun.radius * zoom,
+      0,
+      Math.PI * 2
+    );
+    ctx.fillStyle = sun.color;
+    ctx.fill();
+  }
 
   planets.forEach(p => {
     if (isRunningRef.current) {
@@ -62,15 +72,25 @@ export function drawSolarSystem(ctx, width, height, sun, planets, G, timeScaleRe
     ctx.stroke();
 
     // 惑星
-    ctx.beginPath();
-    ctx.arc(
-      (p.x - centerX) * zoom + width / 2,
-      (p.y - centerY) * zoom + height / 2,
-      p.radius * zoom,
-      0,
-      Math.PI * 2
-    );
-    ctx.fillStyle = p.color;
-    ctx.fill();
+    if (p.image && p.image.complete) {
+      ctx.drawImage(
+        p.image,
+        (p.x - centerX) * zoom + width / 2 - p.radius * zoom,
+        (p.y - centerY) * zoom + height / 2 - p.radius * zoom,
+        p.radius * 2 * zoom,
+        p.radius * 2 * zoom
+      );
+    } else {
+      ctx.beginPath();
+      ctx.arc(
+        (p.x - centerX) * zoom + width / 2,
+        (p.y - centerY) * zoom + height / 2,
+        p.radius * zoom,
+        0,
+        Math.PI * 2
+      );
+      ctx.fillStyle = p.color;
+      ctx.fill();
+    }
   });
 }

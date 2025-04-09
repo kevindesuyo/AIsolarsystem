@@ -31,7 +31,14 @@ function useSimulation(canvasRef) {
         y: height / 2,
         radius: 30,
         mass: sunMass,
-        color: 'yellow'
+        color: 'yellow',
+        image: null,
+      };
+      // 太陽画像のロード
+      const sunImg = new Image();
+      sunImg.src = '/planets/sun.png';
+      sunImg.onload = () => {
+        sunRef.current.image = sunImg;
       };
     } else {
       sunRef.current.mass = sunMass;
@@ -40,6 +47,14 @@ function useSimulation(canvasRef) {
 
     if (!planetsRef.current) {
       planetsRef.current = initializePlanets(sun);
+      // 惑星画像のロード
+      planetsRef.current.forEach(p => {
+        const img = new Image();
+        img.src = `/planets/${p.name.toLowerCase()}.png`;
+        img.onload = () => {
+          p.image = img;
+        };
+      });
       setPlanets(planetsRef.current.map(p => ({...p})));
     }
     const planetsLocal = planetsRef.current;

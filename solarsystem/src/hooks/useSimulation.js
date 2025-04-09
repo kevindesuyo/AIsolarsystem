@@ -5,6 +5,12 @@ function useSimulation(canvasRef) {
   const [timeScale, setTimeScale] = useState(1);
   const [, setIsRunning] = useState(true);
 
+  const [gravity, setGravity] = useState(0.1);
+  const [sunMass, setSunMass] = useState(10000);
+  const [planets, setPlanets] = useState([]);
+  const [zoom, setZoom] = useState(1);
+  const [cameraTarget, setCameraTarget] = useState('sun');
+
   const timeScaleRef = useRef(1);
   const isRunningRef = useRef(true);
 
@@ -19,47 +25,45 @@ function useSimulation(canvasRef) {
     const width = canvas.width = window.innerWidth;
     const height = canvas.height = window.innerHeight;
 
-    const G = 0.1;
-
     if (!sunRef.current) {
-      sunRef.current = { 
-        x: width / 2, 
-        y: height / 2, 
-        radius: 30, 
-        mass: 10000, 
-        color: 'yellow' 
+      sunRef.current = {
+        x: width / 2,
+        y: height / 2,
+        radius: 30,
+        mass: sunMass,
+        color: 'yellow'
       };
+    } else {
+      sunRef.current.mass = sunMass;
     }
     const sun = sunRef.current;
 
     if (!planetsRef.current) {
       planetsRef.current = initializePlanets(sun);
+      setPlanets(planetsRef.current.map(p => ({...p})));
     }
-    const planets = planetsRef.current;
+    const planetsLocal = planetsRef.current;
 
     function animate() {
-      drawSolarSystem(ctx, width, height, sun, planets, G, timeScaleRef, isRunningRef);
+      drawSolarSystem(ctx, width, height, sun, planetsLocal, gravity, timeScaleRef, isRunningRef, zoom, cameraTarget);
       requestAnimationFrame(animate);
     }
 
     animate();
-  }, [canvasRef]);
+  }, [canvasRef, gravity, sunMass, zoom, cameraTarget]);
 
   const initializePlanets = (sun) => {
     return [
-      { radius: 5, color: 'gray', mass: 1, x: sun.x + 60, y: sun.y, vx: 0, vy: 2.5, trail: [] },
-      { radius: 8, color: 'orange', mass: 1, x: sun.x + 100, y: sun.y, vx: 0, vy: 2.0, trail: [] },
-      { radius: 9, color: 'blue', mass: 1, x: sun.x + 140, y: sun.y, vx: 0, vy: 1.7, trail: [] },
-      { radius: 7, color: 'red', mass: 1, x: sun.x + 180, y: sun.y, vx: 0, vy: 1.5, trail: [] },
-      { radius: 15, color: 'brown', mass: 1, x: sun.x + 240, y: sun.y, vx: 0, vy: 1.2, trail: [] },
-      { radius: 12, color: 'beige', mass: 1, x: sun.x + 300, y: sun.y, vx: 0, vy: 1.0, trail: [] },
-      { radius: 10, color: 'lightblue', mass: 1, x: sun.x + 350, y: sun.y, vx: 0, vy: 0.9, trail: [] },
-      { radius: 10, color: 'darkblue', mass: 1, x: sun.x + 400, y: sun.y, vx: 0, vy: 0.8, trail: [] },
+      { name: 'Mercury', radius: 5, color: 'gray', mass: 1, x: sun.x + 60, y: sun.y, vx: 0, vy: 2.5, trail: [], velocity: 2.5 },
+      { name: 'Venus', radius: 8, color: 'orange', mass: 1, x: sun.x + 100, y: sun.y, vx: 0, vy: 2.0, trail: [], velocity: 2.0 },
+      { name: 'Earth', radius: 9, color: 'blue', mass: 1, x: sun.x + 140, y: sun.y, vx: 0, vy: 1.7, trail: [], velocity: 1.7 },
+      { name: 'Mars', radius: 7, color: 'red', mass: 1, x: sun.x + 180, y: sun.y, vx: 0, vy: 1.5, trail: [], velocity: 1.5 },
     ];
   };
 
   const reset = () => {
     planetsRef.current = initializePlanets(sunRef.current);
+    setPlanets(planetsRef.current.map(p => ({...p})));
     setIsRunning(true);
     setTimeScale(1);
     timeScaleRef.current = 1;
@@ -94,6 +98,46 @@ function useSimulation(canvasRef) {
     isRunningRef.current = true;
   };
 
+  const onGravityChange = (value) => {
+    setGravity(value);
+  };
+
+  const onSunMassChange = (value) => {
+    setSunMass(value);
+    if (sunRef.current) {
+      sunRef.current.mass = value;
+    }
+  };
+
+  const onAddPlanet = () => {
+    const newPlanet = { name: 'NewPlanet', radius: 5, color: 'white', mass: 1, x: sunRef.current.x + 200, y: sunRef.current.y, vx: 0, vy: 1.0, trail: [], velocity: 1.0 };
+    planetsRef.current.push(newPlanet);
+    setPlanets(planetsRef.current.map(p => ({...p})));
+  };
+
+  const onRemovePlanet = (index) => {
+    planetsRef.current.splice(index, 1);
+    setPlanets(planetsRef.current.map(p => ({...p})));
+  };
+
+  const onUpdatePlanet = (index, updatedPlanet) => {
+    planetsRef.current[index] = {
+      ...planetsRef.current[index],
+      ...updatedPlanet,
+      vx: 0,
+      vy: updatedPlanet.velocity,
+    };
+    setPlanets(planetsRef.current.map(p => ({...p})));
+  };
+
+  const onZoomChange = (value) => {
+    setZoom(value);
+  };
+
+  const onCameraTargetChange = (value) => {
+    setCameraTarget(value);
+  };
+
   return {
     timeScale,
     slowDown,
@@ -101,6 +145,18 @@ function useSimulation(canvasRef) {
     pause,
     resume,
     reset,
+    gravity,
+    onGravityChange,
+    sunMass,
+    onSunMassChange,
+    planets,
+    onAddPlanet,
+    onRemovePlanet,
+    onUpdatePlanet,
+    zoom,
+    onZoomChange,
+    cameraTarget,
+    onCameraTargetChange,
   };
 }
 

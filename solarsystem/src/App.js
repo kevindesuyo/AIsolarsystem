@@ -13,6 +13,18 @@ function App() {
     pause,
     resume,
     reset,
+    gravity,
+    onGravityChange,
+    sunMass,
+    onSunMassChange,
+    planets,
+    onAddPlanet,
+    onRemovePlanet,
+    onUpdatePlanet,
+    zoom,
+    onZoomChange,
+    cameraTarget,
+    onCameraTargetChange,
   } = useSimulation(canvasRef);
 
   return (
@@ -25,6 +37,18 @@ function App() {
         onPause={pause}
         onResume={resume}
         onReset={reset}
+        gravity={gravity}
+        onGravityChange={onGravityChange}
+        sunMass={sunMass}
+        onSunMassChange={onSunMassChange}
+        planets={planets}
+        onAddPlanet={onAddPlanet}
+        onRemovePlanet={onRemovePlanet}
+        onUpdatePlanet={onUpdatePlanet}
+        zoom={zoom}
+        onZoomChange={onZoomChange}
+        cameraTarget={cameraTarget}
+        onCameraTargetChange={onCameraTargetChange}
       />
     </>
   );

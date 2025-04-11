@@ -137,12 +137,27 @@ function useSimulation(canvasRef: any) {
   }, [canvasRef, gravity, sunMass, zoom, cameraTarget, planets, planetTrails, timeScale, isRunning]);
 
   const initializePlanets = (sun: any): PlanetType[] => {
-    return [
-      { name: 'Mercury', radius: 5, color: 'gray', mass: 1, x: sun.x + 60, y: sun.y, vx: 0, vy: 2.5, velocity: 2.5 },
-      { name: 'Venus', radius: 8, color: 'orange', mass: 1, x: sun.x + 100, y: sun.y, vx: 0, vy: 2.0, velocity: 2.0 },
-      { name: 'Earth', radius: 9, color: 'blue', mass: 1, x: sun.x + 140, y: sun.y, vx: 0, vy: 1.7, velocity: 1.7 },
-      { name: 'Mars', radius: 7, color: 'red', mass: 1, x: sun.x + 180, y: sun.y, vx: 0, vy: 1.5, velocity: 1.5 },
-    ];
+    // v = sqrt(G * M / r)
+    const G = 0.1;
+    const M = 10000;
+    const radii = [60, 100, 140, 180];
+    const names = ['Mercury', 'Venus', 'Earth', 'Mars'];
+    const colors = ['gray', 'orange', 'blue', 'red'];
+    const planetRadii = [5, 8, 9, 7];
+    return radii.map((r, i) => {
+      const v = Math.sqrt(G * M / r);
+      return {
+        name: names[i],
+        radius: planetRadii[i],
+        color: colors[i],
+        mass: 1,
+        x: sun.x + r,
+        y: sun.y,
+        vx: 0,
+        vy: v,
+        velocity: v,
+      };
+    });
   };
 
   const reset = () => {

@@ -1,15 +1,15 @@
-export function drawSolarSystem(ctx, width, height, sun, planets, G, timeScaleRef, isRunningRef, zoom = 1, cameraTarget = 'sun') {
+export function drawSolarSystem(ctx, width, height, sun, planets, G, timeScaleRef, isRunningRef, zoom = 1, cameraTarget = 'sun', planetTrails = new Map()) {
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, width, height);
 
-  // 星空の描画
-  for (let i = 0; i < 300; i++) {
+  // 星空の描画（控えめに）
+  for (let i = 0; i < 50; i++) {
     const x = Math.random() * width;
     const y = Math.random() * height;
-    const radius = Math.random() * 1.5;
+    const radius = Math.random() * 1.2;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
     ctx.fill();
   }
 
@@ -82,23 +82,21 @@ export function drawSolarSystem(ctx, width, height, sun, planets, G, timeScaleRe
 
       p.x += p.vx * timeScaleRef.current;
       p.y += p.vy * timeScaleRef.current;
-
-      p.trail.push({ x: p.x, y: p.y });
-      if (p.trail.length > 100) p.trail.shift();
     }
 
     // 軌道
+    const trail = planetTrails.get(p.name) || [];
     ctx.beginPath();
     ctx.strokeStyle = p.color;
     ctx.lineWidth = 1;
-    for (let i = 0; i < p.trail.length - 1; i++) {
+    for (let i = 0; i < trail.length - 1; i++) {
       ctx.moveTo(
-        (p.trail[i].x - centerX) * zoom + width / 2,
-        (p.trail[i].y - centerY) * zoom + height / 2
+        (trail[i].x - centerX) * zoom + width / 2,
+        (trail[i].y - centerY) * zoom + height / 2
       );
       ctx.lineTo(
-        (p.trail[i + 1].x - centerX) * zoom + width / 2,
-        (p.trail[i + 1].y - centerY) * zoom + height / 2
+        (trail[i + 1].x - centerX) * zoom + width / 2,
+        (trail[i + 1].y - centerY) * zoom + height / 2
       );
     }
     ctx.stroke();

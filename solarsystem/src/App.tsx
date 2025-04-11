@@ -13,6 +13,7 @@ function App() {
     pause,
     resume,
     reset,
+    fullReset,
     gravity,
     onGravityChange,
     sunMass,
@@ -37,6 +38,7 @@ function App() {
         onPause={pause}
         onResume={resume}
         onReset={reset}
+        onFullReset={fullReset}
         gravity={gravity}
         onGravityChange={onGravityChange}
         sunMass={sunMass}

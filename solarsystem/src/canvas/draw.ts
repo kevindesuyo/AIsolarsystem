@@ -1,141 +1,166 @@
-export function drawSolarSystem(ctx, width, height, sun, planets, G, timeScaleRef, isRunningRef, zoom = 1, cameraTarget = 'sun', planetTrails = new Map()) {
-  ctx.fillStyle = 'black';
-  ctx.fillRect(0, 0, width, height);
+import { Planet, Sun, ViewParameters, TrailMap } from '../types';
 
-  // 星空の描画（控えめに）
-  for (let i = 0; i < 50; i++) {
+const STAR_COUNT = 50; // Number of background stars
+
+/**
+ * Draws the background stars.
+ */
+function drawStars(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
+  for (let i = 0; i < STAR_COUNT; i++) {
     const x = Math.random() * width;
     const y = Math.random() * height;
     const radius = Math.random() * 1.2;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
-    ctx.fill();
-  }
-
-  let centerX = sun.x;
-  let centerY = sun.y;
-
-  if (cameraTarget !== 'sun') {
-    const targetPlanet = planets.find(p => p.name === cameraTarget);
-    if (targetPlanet) {
-      centerX = targetPlanet.x;
-      centerY = targetPlanet.y;
-    }
-  }
-
-  // 太陽
-  ctx.save();
-  ctx.shadowBlur = 50 * zoom;
-  ctx.shadowColor = 'yellow';
-  if (sun.image && sun.image.complete) {
-    ctx.drawImage(
-      sun.image,
-      (sun.x - centerX) * zoom + width / 2 - sun.radius * zoom,
-      (sun.y - centerY) * zoom + height / 2 - sun.radius * zoom,
-      sun.radius * 2 * zoom,
-      sun.radius * 2 * zoom
-    );
-  } else {
-    ctx.beginPath();
-    ctx.arc(
-      (sun.x - centerX) * zoom + width / 2,
-      (sun.y - centerY) * zoom + height / 2,
-      sun.radius * zoom,
-      0,
-      Math.PI * 2
-    );
-    ctx.fillStyle = sun.color;
     ctx.fill();
   }
   ctx.restore();
+}
 
-  planets.forEach(p => {
-    if (isRunningRef.current) {
-      let axTotal = 0;
-      let ayTotal = 0;
+/**
+ * Draws a celestial body (Sun or Planet).
+ */
+function drawBody(
+  ctx: CanvasRenderingContext2D,
+  body: Sun | Planet,
+  viewParams: ViewParameters,
+  centerPos: { x: number; y: number },
+  canvasWidth: number,
+  canvasHeight: number
+) {
+  const { zoom } = viewParams;
+  const screenX = (body.position.x - centerPos.x) * zoom + canvasWidth / 2;
+  const screenY = (body.position.y - centerPos.y) * zoom + canvasHeight / 2;
+  const screenRadius = body.radius * zoom;
 
-      // 太陽の重力
-      const dxSun = sun.x - p.x;
-      const dySun = sun.y - p.y;
-      const distSqSun = dxSun * dxSun + dySun * dySun;
-      const distSun = Math.sqrt(distSqSun);
-      const forceSun = (G * sun.mass) / distSqSun;
-      axTotal += forceSun * dxSun / distSun;
-      ayTotal += forceSun * dySun / distSun;
+  ctx.save();
 
-      // 他の惑星の重力
-      planets.forEach(other => {
-        if (other === p) return;
-        const dx = other.x - p.x;
-        const dy = other.y - p.y;
-        const distSq = dx * dx + dy * dy;
-        const dist = Math.sqrt(distSq);
-        if (distSq === 0) return; // 同位置は無視
-        const force = (G * other.mass) / distSq;
-        axTotal += force * dx / dist;
-        ayTotal += force * dy / dist;
-      });
+  // Add shadow for the sun
+  if (body.name === 'Sun') {
+    ctx.shadowBlur = 50 * zoom;
+    ctx.shadowColor = 'yellow';
+  }
 
-      p.vx += axTotal * timeScaleRef.current;
-      p.vy += ayTotal * timeScaleRef.current;
-
-      p.x += p.vx * timeScaleRef.current;
-      p.y += p.vy * timeScaleRef.current;
-    }
-
-    // 軌道
-    const trail = planetTrails.get(p.name) || [];
-    ctx.beginPath();
-    ctx.strokeStyle = p.color;
-    ctx.lineWidth = 1;
-    for (let i = 0; i < trail.length - 1; i++) {
-      ctx.moveTo(
-        (trail[i].x - centerX) * zoom + width / 2,
-        (trail[i].y - centerY) * zoom + height / 2
-      );
-      ctx.lineTo(
-        (trail[i + 1].x - centerX) * zoom + width / 2,
-        (trail[i + 1].y - centerY) * zoom + height / 2
-      );
-    }
-    ctx.stroke();
-
-    // 惑星
-    if (p.image && p.image.complete) {
-      ctx.drawImage(
-        p.image,
-        (p.x - centerX) * zoom + width / 2 - p.radius * zoom,
-        (p.y - centerY) * zoom + height / 2 - p.radius * zoom,
-        p.radius * 2 * zoom,
-        p.radius * 2 * zoom
-      );
-    } else {
-      ctx.beginPath();
-      ctx.arc(
-        (p.x - centerX) * zoom + width / 2,
-        (p.y - centerY) * zoom + height / 2,
-        p.radius * zoom,
-        0,
-        Math.PI * 2
-      );
-      ctx.fillStyle = p.color;
-      ctx.fill();
-    }
-
-    // 惑星名と速度表示
-    ctx.fillStyle = 'white';
-    ctx.font = `${12 * zoom}px sans-serif`;
-    ctx.fillText(
-      `${p.name}`,
-      (p.x - centerX) * zoom + width / 2 + p.radius * zoom + 4,
-      (p.y - centerY) * zoom + height / 2 - p.radius * zoom - 4
+  if (body.image && body.image.complete) {
+    ctx.drawImage(
+      body.image,
+      screenX - screenRadius,
+      screenY - screenRadius,
+      screenRadius * 2,
+      screenRadius * 2
     );
-    const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy).toFixed(2);
+  } else {
+    // Fallback to drawing a circle if image not loaded/available
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, screenRadius, 0, Math.PI * 2);
+    ctx.fillStyle = body.color;
+    ctx.fill();
+  }
+
+  ctx.restore();
+
+  // Draw labels (name and speed) for planets only
+  if (body.name !== 'Sun') {
+    ctx.fillStyle = 'white';
+    ctx.font = `${Math.max(8, 12 * zoom)}px sans-serif`; // Ensure minimum font size
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(
+      `${body.name}`,
+      screenX + screenRadius + 4,
+      screenY - screenRadius - 4
+    );
+
+    // Calculate and display speed
+    const speed = Math.sqrt(body.velocity.x ** 2 + body.velocity.y ** 2).toFixed(2);
+    ctx.textBaseline = 'top';
     ctx.fillText(
       `v=${speed}`,
-      (p.x - centerX) * zoom + width / 2 + p.radius * zoom + 4,
-      (p.y - centerY) * zoom + height / 2 + p.radius * zoom + 12
+      screenX + screenRadius + 4,
+      screenY + screenRadius + 4 // Position below the planet
     );
+  }
+}
+
+/**
+ * Draws the orbital trail for a planet.
+ */
+function drawTrail(
+    ctx: CanvasRenderingContext2D,
+    planet: Planet,
+    trail: TrailMap,
+    viewParams: ViewParameters,
+    centerPos: { x: number; y: number },
+    canvasWidth: number,
+    canvasHeight: number
+) {
+    const { zoom } = viewParams;
+    const path = trail.get(planet.name) || [];
+    if (path.length < 2) return; // Need at least two points to draw a line
+
+    ctx.save();
+    ctx.strokeStyle = planet.color;
+    ctx.lineWidth = Math.max(0.5, 1 * zoom); // Ensure minimum line width
+    ctx.globalAlpha = 0.6; // Make trails slightly transparent
+    ctx.beginPath();
+
+    // Move to the first point
+    ctx.moveTo(
+        (path[0].x - centerPos.x) * zoom + canvasWidth / 2,
+        (path[0].y - centerPos.y) * zoom + canvasHeight / 2
+    );
+
+    // Draw lines to subsequent points
+    for (let i = 1; i < path.length; i++) {
+        ctx.lineTo(
+            (path[i].x - centerPos.x) * zoom + canvasWidth / 2,
+            (path[i].y - centerPos.y) * zoom + canvasHeight / 2
+        );
+    }
+    ctx.stroke();
+    ctx.restore();
+}
+
+
+/**
+ * Main drawing function for the solar system simulation.
+ * This function is responsible only for rendering the current state.
+ */
+export function drawSolarSystem(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  sun: Sun,
+  planets: Planet[],
+  viewParams: ViewParameters,
+  planetTrails: TrailMap
+) {
+  // Clear canvas
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, width, height);
+
+  // Draw background stars
+  drawStars(ctx, width, height);
+
+  // Determine camera center based on target
+  let centerPos = { x: sun.position.x, y: sun.position.y };
+  if (viewParams.cameraTarget !== 'sun') {
+    const targetPlanet = planets.find(p => p.name === viewParams.cameraTarget);
+    if (targetPlanet) {
+      centerPos = { x: targetPlanet.position.x, y: targetPlanet.position.y };
+    }
+    // If target planet not found (e.g., just removed), default back to sun? Or keep last known?
+    // For now, defaults to sun if target not found.
+  }
+
+  // Draw Sun
+  drawBody(ctx, sun, viewParams, centerPos, width, height);
+
+  // Draw Planets and Trails
+  planets.forEach(planet => {
+    drawTrail(ctx, planet, planetTrails, viewParams, centerPos, width, height);
+    drawBody(ctx, planet, viewParams, centerPos, width, height);
   });
 }

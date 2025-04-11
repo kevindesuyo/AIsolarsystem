@@ -1,58 +1,57 @@
 import React, { useRef } from 'react';
 import './App.css';
 import ControlPanel from './components/ControlPanel';
-import useSimulation from './hooks/useSimulation';
+import { useSimulation } from './hooks/useSimulation'; // Changed to named import
+import { Planet, SimulationParameters, TimeControlParameters, ViewParameters, EditablePlanetParams } from './types'; // Import types
 
 function App() {
-  const canvasRef = useRef(null);
+  // Correctly type the canvas ref
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Remove the duplicated old destructuring
   const {
-    timeScale,
-    isRunning,
-    slowDown,
+    simulationParams, // Contains gravity, sunMass
+    timeControl, // Contains timeScale, isRunning
+    viewParams, // Contains zoom, cameraTarget
+    planets,
+    // planetTrails, // Not directly needed by App or ControlPanel display
+    slowDown, // Control function
     speedUp,
     pause,
     resume,
     reset,
     fullReset,
-    gravity,
     onGravityChange,
-    sunMass,
     onSunMassChange,
-    planets,
+    onZoomChange,
+    onCameraTargetChange,
     onAddPlanet,
     onRemovePlanet,
-    onUpdatePlanet,
-    zoom,
-    onZoomChange,
-    cameraTarget,
-    onCameraTargetChange,
+    onUpdatePlanetParams, // Use the new update function
   } = useSimulation(canvasRef);
 
   return (
     <>
       <canvas ref={canvasRef} style={{ display: 'block' }} />
+      {/* Pass the structured parameters and updated functions to ControlPanel */}
       <ControlPanel
-        timeScale={timeScale}
-        isRunning={isRunning}
+        timeControl={timeControl}
+        simulationParams={simulationParams}
+        viewParams={viewParams}
+        planets={planets} // Pass the current planet state for display/selection
         onSlowDown={slowDown}
         onSpeedUp={speedUp}
         onPause={pause}
         onResume={resume}
         onReset={reset}
         onFullReset={fullReset}
-        gravity={gravity}
         onGravityChange={onGravityChange}
-        sunMass={sunMass}
         onSunMassChange={onSunMassChange}
-        planets={planets}
-        onAddPlanet={onAddPlanet}
-        onRemovePlanet={onRemovePlanet}
-        onUpdatePlanet={onUpdatePlanet}
-        zoom={zoom}
         onZoomChange={onZoomChange}
-        cameraTarget={cameraTarget}
         onCameraTargetChange={onCameraTargetChange}
+        onAddPlanet={onAddPlanet} // Will need adjustment in ControlPanel
+        onRemovePlanet={onRemovePlanet}
+        onUpdatePlanetParams={onUpdatePlanetParams} // Pass the new update function
       />
     </>
   );

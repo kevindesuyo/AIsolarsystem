@@ -28,6 +28,7 @@ function App() {
     onAddPlanet,
     onRemovePlanet,
     onUpdatePlanetParams, // Use the new update function
+    selectPlanetForPrediction, // Get the prediction selection function
   } = useSimulation(canvasRef);
 
   return (
@@ -49,9 +50,10 @@ function App() {
         onSunMassChange={onSunMassChange}
         onZoomChange={onZoomChange}
         onCameraTargetChange={onCameraTargetChange}
-        onAddPlanet={onAddPlanet} // Will need adjustment in ControlPanel
+        onAddPlanet={onAddPlanet}
         onRemovePlanet={onRemovePlanet}
-        onUpdatePlanetParams={onUpdatePlanetParams} // Pass the new update function
+        onUpdatePlanetParams={onUpdatePlanetParams}
+        selectPlanetForPrediction={selectPlanetForPrediction} // Pass the function down
       />
     </>
   );

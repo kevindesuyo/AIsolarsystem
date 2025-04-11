@@ -29,13 +29,97 @@ function calculateGravitationalForce(
   return { x: fx, y: fy };
 }
 
+
 /**
- * Updates the state of the planets for one time step.
+ * Handles collisions between planets in the given list.
+ * Assumes perfectly inelastic collisions (mergers).
+ * @param planets List of planets after position/velocity update for the timestep.
+ * @returns A new list of planets where collided planets are replaced by merged ones.
+ */
+function handleCollisions(planets: Planet[]): Planet[] {
+    const finalPlanets: Planet[] = [];
+    const collidedIds = new Set<string>(); // Keep track of planets already involved in a collision this step
+
+    for (let i = 0; i < planets.length; i++) {
+        if (collidedIds.has(planets[i].id)) continue; // Skip if already collided
+
+        let currentPlanet = planets[i];
+        let collisionOccurred = false;
+
+        for (let j = i + 1; j < planets.length; j++) {
+            if (collidedIds.has(planets[j].id)) continue; // Skip other already collided planet
+
+            const otherPlanet = planets[j];
+            const dx = otherPlanet.position.x - currentPlanet.position.x;
+            const dy = otherPlanet.position.y - currentPlanet.position.y;
+            const distSq = dx * dx + dy * dy;
+            const radiusSum = currentPlanet.radius + otherPlanet.radius;
+
+            // Collision detected
+            if (distSq < radiusSum * radiusSum) {
+                // Mark both as collided
+                collidedIds.add(currentPlanet.id);
+                collidedIds.add(otherPlanet.id);
+                collisionOccurred = true; // Mark that the currentPlanet was involved
+
+                // Determine larger planet (by mass)
+                const largerPlanet = currentPlanet.mass >= otherPlanet.mass ? currentPlanet : otherPlanet;
+                const smallerPlanet = currentPlanet.mass < otherPlanet.mass ? currentPlanet : otherPlanet;
+
+                // Calculate properties of the merged planet
+                const combinedMass = currentPlanet.mass + otherPlanet.mass;
+                // Conservation of momentum: m1*v1 + m2*v2 = (m1+m2)*v_new
+                const newVelocity: Vector2D = {
+                    x: (currentPlanet.mass * currentPlanet.velocity.x + otherPlanet.mass * otherPlanet.velocity.x) / combinedMass,
+                    y: (currentPlanet.mass * currentPlanet.velocity.y + otherPlanet.mass * otherPlanet.velocity.y) / combinedMass,
+                };
+                // Position of the merged planet (use larger planet's position for simplicity)
+                const newPosition = largerPlanet.position;
+
+                // Create the new merged planet
+                const mergedPlanet: Planet = {
+                    id: crypto.randomUUID(),
+                    name: `${largerPlanet.name} & ${smallerPlanet.name} Merger`,
+                    type: largerPlanet.type, // Inherit from larger
+                    radius: largerPlanet.radius, // Inherit radius from larger (simplification)
+                    color: largerPlanet.color, // Inherit color from larger
+                    texturePath: largerPlanet.texturePath, // Inherit texture
+                    mass: combinedMass,
+                    position: newPosition,
+                    velocity: newVelocity,
+                    rotationSpeed: largerPlanet.rotationSpeed, // Inherit rotation speed
+                    currentRotation: largerPlanet.currentRotation, // Inherit current rotation
+                    acceleration: { x: 0, y: 0 }, // Reset acceleration (will be calculated next step)
+                    // initialOrbitalRadius and initialVelocityMagnitude are not relevant for merged objects
+                };
+
+                // Replace currentPlanet with the merged result for potential further collisions in this step
+                // This is a simplification; complex multi-body collisions are hard.
+                // For now, we just add the merged planet at the end.
+                finalPlanets.push(mergedPlanet); // Add the new merged planet
+
+                // Break the inner loop as the currentPlanet (i) is now considered handled
+                break;
+            }
+        }
+
+        // If the current planet (i) was not involved in any collision, add it to the final list
+        if (!collisionOccurred) {
+            finalPlanets.push(currentPlanet);
+        }
+    }
+
+    return finalPlanets;
+}
+
+
+/**
+ * Updates the state of the planets for one time step, including collision handling.
  * @param sun The sun object.
  * @param planets The current array of planets.
  * @param params Simulation parameters (gravity G).
  * @param timeStep The time elapsed in this step (timeScale).
- * @returns The updated array of planets.
+ * @returns The updated array of planets after physics and collisions.
  */
 export function updateSimulationState(
   sun: Sun,
@@ -43,13 +127,14 @@ export function updateSimulationState(
   params: SimulationParameters,
   timeStep: number
 ): Planet[] {
-  if (timeStep <= 0) {
-    return planets; // No update if time is paused or reversed
+  if (timeStep <= 0 || planets.length === 0) {
+    return planets; // No update if time is paused, reversed, or no planets
   }
 
   const G = params.gravity;
 
-  return planets.map((planet) => {
+  // 1. Calculate forces and update position/velocity/rotation for all planets
+  const updatedPlanets = planets.map((planet) => {
     let totalForce: Vector2D = { x: 0, y: 0 };
 
     // Force from the sun
@@ -59,7 +144,7 @@ export function updateSimulationState(
 
     // Forces from other planets (n-body interaction)
     planets.forEach((otherPlanet) => {
-      if (otherPlanet === planet) return; // Skip self interaction
+      if (otherPlanet.id === planet.id) return; // Skip self interaction (use ID)
       const planetForce = calculateGravitationalForce(planet, otherPlanet, G);
       totalForce.x += planetForce.x;
       totalForce.y += planetForce.y;
@@ -83,13 +168,24 @@ export function updateSimulationState(
       y: planet.position.y + newVelocity.y * timeStep,
     };
 
+    // Update rotation angle
+    const newRotation = (planet.currentRotation + planet.rotationSpeed * timeStep) % (2 * Math.PI);
+
     return {
       ...planet,
       position: newPosition,
       velocity: newVelocity,
+      acceleration: acceleration, // Store the calculated acceleration
+      currentRotation: newRotation, // Store the updated rotation
     };
   });
+
+  // 2. Handle collisions among the updated planets
+  const finalPlanets = handleCollisions(updatedPlanets);
+
+  return finalPlanets;
 }
+
 
 /**
  * Calculates the initial velocity for a stable circular orbit.

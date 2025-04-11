@@ -4,11 +4,12 @@ import { updateSimulationState, calculateOrbitalVelocity } from '../simulationEn
 import { usePlanetTrails } from './usePlanetTrails';
 import {
   Planet, Sun, SimulationParameters, TimeControlParameters, ViewParameters,
-  Vector2D, EditablePlanetParams
+  Vector2D, EditablePlanetParams, CelestialBody
 } from '../types';
 
 // --- Constants ---
 const DEFAULT_GRAVITY = 6.674e-3; // Adjusted G for simulation scale
+const PREDICTION_STEPS = 500; // Number of steps to predict ahead
 const DEFAULT_SUN_MASS = 10000;
 const DEFAULT_TIME_SCALE = 1;
 const MIN_TIME_SCALE = 0.1;
@@ -21,19 +22,18 @@ const DEFAULT_CAMERA_TARGET = 'sun';
 // --- Helper Functions ---
 function createInitialSun(canvasWidth: number, canvasHeight: number, mass: number): Sun {
   const sun: Sun = {
+    id: crypto.randomUUID(),
     name: 'Sun',
+    type: 'star',
     radius: 30, // Visual radius
     color: 'yellow',
+    texturePath: 'planets/sun.jpg', // Add texture path
     mass: mass,
     position: { x: canvasWidth / 2, y: canvasHeight / 2 },
     velocity: { x: 0, y: 0 }, // Sun is stationary
-    image: null,
-  };
-  // Load image asynchronously
-  const img = new Image();
-  img.src = '/planets/sun.jpg';
-  img.onload = () => {
-    sun.image = img;
+    rotationSpeed: 0.001, // Example rotation speed
+    currentRotation: 0,
+    // acceleration is not typically relevant for a stationary sun in this model
   };
   return sun;
 }
@@ -50,29 +50,29 @@ function createPlanetFromEditable(
   const velocity = calculateOrbitalVelocity(sun.position, position, G, sun.mass);
 
   const planet: Planet = {
+    id: crypto.randomUUID(),
     name: params.name,
+    type: params.type,
     radius: params.radius,
     color: params.color,
+    texturePath: params.texturePath || `planets/${params.name.toLowerCase()}.jpg`, // Default path or from params
     mass: params.mass,
     position: position,
     velocity: velocity,
+    rotationSpeed: params.rotationSpeed,
+    currentRotation: Math.random() * 2 * Math.PI, // Random initial rotation
     initialOrbitalRadius: params.initialOrbitalRadius,
-    image: null, // Image loading can be added similarly if needed
+    acceleration: { x: 0, y: 0 }, // Initialize acceleration
   };
-  // Example image loading (adjust path/logic as needed)
-  // const img = new Image();
-  // img.src = `/planets/${params.name.toLowerCase()}.jpg`; // Assuming image names match planet names
-  // img.onload = () => {
-  //   planet.image = img;
-  // };
   return planet;
 }
 
+// Add type and rotationSpeed to default params
 const DEFAULT_PLANETS_PARAMS: EditablePlanetParams[] = [
-  { name: 'Mercury', radius: 5, color: 'gray', mass: 1, initialOrbitalRadius: 60 },
-  { name: 'Venus', radius: 8, color: 'orange', mass: 1.5, initialOrbitalRadius: 100 },
-  { name: 'Earth', radius: 9, color: 'blue', mass: 2, initialOrbitalRadius: 140 },
-  { name: 'Mars', radius: 7, color: 'red', mass: 1.2, initialOrbitalRadius: 180 },
+  { name: 'Mercury', type: 'rocky', radius: 5, color: 'gray', texturePath: 'planets/mercury.jpg', mass: 1, initialOrbitalRadius: 60, rotationSpeed: 0.01 },
+  { name: 'Venus', type: 'rocky', radius: 8, color: 'orange', texturePath: 'planets/venus.jpg', mass: 1.5, initialOrbitalRadius: 100, rotationSpeed: 0.005 },
+  { name: 'Earth', type: 'rocky', radius: 9, color: 'blue', texturePath: 'planets/earth.jpg', mass: 2, initialOrbitalRadius: 140, rotationSpeed: 0.02 },
+  { name: 'Mars', type: 'rocky', radius: 7, color: 'red', texturePath: 'planets/mars.jpg', mass: 1.2, initialOrbitalRadius: 180, rotationSpeed: 0.018 },
 ];
 
 // --- Hook ---
@@ -94,6 +94,9 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
 
   const [sun, setSun] = useState<Sun | null>(null);
   const [planets, setPlanets] = useState<Planet[]>([]);
+  const [predictedPlanetId, setPredictedPlanetId] = useState<string | null>(null);
+  const [predictedPath, setPredictedPath] = useState<Vector2D[]>([]);
+
 
   // Use the custom hook for trails
   const {
@@ -107,12 +110,65 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
 
   // Ref for animation loop to access latest state without triggering effect re-runs
   const animationFrameId = useRef<number | null>(null);
-  const latestState = useRef({ sun, planets, simulationParams, timeControl, viewParams, planetTrails });
+  // Include prediction state in latestState ref if needed by animation loop directly,
+  // but prediction calculation happens in its own effect.
+  const latestState = useRef({ sun, planets, simulationParams, timeControl, viewParams, planetTrails, predictedPath });
 
   // Update latestState ref whenever state changes
   useEffect(() => {
-    latestState.current = { sun, planets, simulationParams, timeControl, viewParams, planetTrails };
-  }, [sun, planets, simulationParams, timeControl, viewParams, planetTrails]);
+    latestState.current = { sun, planets, simulationParams, timeControl, viewParams, planetTrails, predictedPath };
+  }, [sun, planets, simulationParams, timeControl, viewParams, planetTrails, predictedPath]);
+
+
+  // --- Prediction Calculation ---
+  // Function to calculate predicted path (can be moved outside if preferred)
+  const calculatePredictedPath = useCallback((
+    targetId: string,
+    currentPlanets: Planet[],
+    currentSun: Sun,
+    currentSimParams: SimulationParameters,
+    currentTimeScale: number,
+    steps: number
+  ): Vector2D[] => {
+    const targetPlanetIndex = currentPlanets.findIndex(p => p.id === targetId);
+    if (targetPlanetIndex === -1) return [];
+
+    let tempPlanets = currentPlanets.map(p => ({ ...p })); // Deep copy needed? For now, shallow copy position/velocity
+    const path: Vector2D[] = [tempPlanets[targetPlanetIndex].position]; // Start with current position
+
+    for (let i = 0; i < steps; i++) {
+      // Simulate one step ahead using the simulation engine on the temporary state
+      // NOTE: This uses the *exported* updateSimulationState which includes collision handling.
+      // For pure prediction, a version without collision might be better, but this works for now.
+      tempPlanets = updateSimulationState(currentSun, tempPlanets, currentSimParams, currentTimeScale);
+
+      // Find the target planet again in case of mergers/removals (though mergers change ID)
+      const currentTargetIndex = tempPlanets.findIndex(p => p.id === targetId);
+      if (currentTargetIndex === -1) break; // Target planet disappeared (e.g., collision)
+
+      path.push(tempPlanets[currentTargetIndex].position);
+    }
+
+    return path;
+  }, []); // Dependencies will be handled by the useEffect below
+
+  // Effect to recalculate prediction when relevant state changes
+  useEffect(() => {
+    if (predictedPlanetId && sun && planets.length > 0) {
+      const path = calculatePredictedPath(
+        predictedPlanetId,
+        planets,
+        sun,
+        simulationParams,
+        timeControl.timeScale, // Use current timeScale for prediction step size
+        PREDICTION_STEPS
+      );
+      setPredictedPath(path);
+    } else {
+      setPredictedPath([]); // Clear path if no planet selected or simulation not ready
+    }
+  }, [predictedPlanetId, planets, sun, simulationParams, timeControl.timeScale, calculatePredictedPath]);
+
 
   // --- Initialization ---
   useEffect(() => {
@@ -154,7 +210,8 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
         simulationParams: currentSimParams,
         timeControl: currentTimeControl,
         viewParams: currentViewParams,
-        planetTrails: currentTrails
+        planetTrails: currentTrails,
+        predictedPath: currentPredictedPath // Get predicted path from ref
       } = latestState.current; // Use latest state from ref
 
       if (!currentSun) { // Should not happen if initialized correctly, but safe check
@@ -190,7 +247,8 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
         currentSun,
         updatedPlanets, // Draw the newly calculated positions
         currentViewParams,
-        currentTrails
+        currentTrails,
+        currentPredictedPath // Pass predicted path to draw function
       );
 
       animationFrameId.current = requestAnimationFrame(animate);
@@ -302,44 +360,57 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
   }, [removeTrail]);
 
   // Update only initial editable parameters. Recalculates position/velocity on next reset/add.
-  const onUpdatePlanetParams = useCallback((targetName: string, updatedParams: Partial<EditablePlanetParams>) => {
+  const onUpdatePlanetParams = useCallback((targetId: string, updatedParams: Partial<EditablePlanetParams>) => {
       setPlanets(prevPlanets => {
-          const targetIndex = prevPlanets.findIndex(p => p.name === targetName);
+          const targetIndex = prevPlanets.findIndex(p => p.id === targetId); // Use ID for lookup
           if (targetIndex === -1) return prevPlanets; // Planet not found
 
           const oldPlanet = prevPlanets[targetIndex];
-          const newParams: EditablePlanetParams = {
-              // Get existing editable params
-              name: oldPlanet.name,
-              radius: oldPlanet.radius,
-              color: oldPlanet.color,
-              mass: oldPlanet.mass,
-              initialOrbitalRadius: oldPlanet.initialOrbitalRadius ?? 0, // Provide default if undefined
-              // Apply updates
-              ...updatedParams,
+
+          // Create the full EditablePlanetParams object, merging old and new
+          // Ensure all required fields have values
+          const mergedParams: EditablePlanetParams = {
+              name: updatedParams.name ?? oldPlanet.name,
+              type: updatedParams.type ?? oldPlanet.type,
+              radius: updatedParams.radius ?? oldPlanet.radius,
+              color: updatedParams.color ?? oldPlanet.color,
+              texturePath: updatedParams.texturePath === undefined ? oldPlanet.texturePath : updatedParams.texturePath, // Handle undefined vs missing
+              mass: updatedParams.mass ?? oldPlanet.mass,
+              initialOrbitalRadius: updatedParams.initialOrbitalRadius ?? oldPlanet.initialOrbitalRadius ?? 0,
+              rotationSpeed: updatedParams.rotationSpeed ?? oldPlanet.rotationSpeed,
           };
 
           // Ensure name uniqueness if changed
-          let finalName = newParams.name;
+          let finalName = mergedParams.name;
           if (updatedParams.name && updatedParams.name !== oldPlanet.name) {
               let counter = 1;
-              while (prevPlanets.some((p, i) => i !== targetIndex && p.name === finalName)) {
+              // Check against other planets using ID comparison
+              while (prevPlanets.some(p => p.id !== targetId && p.name === finalName)) {
                   finalName = `${updatedParams.name}_${counter++}`;
               }
           }
 
-          const updatedPlanet = {
-              ...oldPlanet,
+          // Create the updated Planet object, keeping non-editable fields
+          const updatedPlanet: Planet = {
+              ...oldPlanet, // Keep id, position, velocity, currentRotation, acceleration
               name: finalName,
-              radius: newParams.radius,
-              color: newParams.color,
-              mass: newParams.mass,
-              initialOrbitalRadius: newParams.initialOrbitalRadius,
-              // Keep current position and velocity - they are simulation state, not editable params
+              type: mergedParams.type,
+              radius: mergedParams.radius,
+              color: mergedParams.color,
+              texturePath: mergedParams.texturePath,
+              mass: mergedParams.mass,
+              initialOrbitalRadius: mergedParams.initialOrbitalRadius,
+              rotationSpeed: mergedParams.rotationSpeed,
+              // Note: position, velocity, acceleration, currentRotation are managed by the simulation loop
           };
 
           const newPlanets = [...prevPlanets];
           newPlanets[targetIndex] = updatedPlanet;
+
+          // Rename trail if name changed (still use name for trails for now)
+          if (finalName !== oldPlanet.name) {
+              renameTrail(oldPlanet.name, finalName);
+          }
 
           // Rename trail if name changed
           if (finalName !== oldPlanet.name) {
@@ -354,9 +425,10 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
   // --- Return Values ---
   return {
     // Simulation State (Read-only for components)
-    sun, // Pass sun state if needed by components
-    planets, // Pass planets state
-    planetTrails, // Pass trails state
+    sun,
+    planets,
+    planetTrails,
+    predictedPath, // Pass prediction path
 
     // Parameters & Controls
     simulationParams,
@@ -376,6 +448,7 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     onCameraTargetChange,
     onAddPlanet,
     onRemovePlanet,
-    onUpdatePlanetParams, // Use this for updating editable params
+    onUpdatePlanetParams,
+    selectPlanetForPrediction: setPredictedPlanetId, // Expose function to select planet for prediction
   };
 }

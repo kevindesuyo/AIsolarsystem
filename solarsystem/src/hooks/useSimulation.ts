@@ -19,7 +19,7 @@ type TrailMap = Map<string, TrailType>;
 
 function useSimulation(canvasRef: any) {
   const [timeScale, setTimeScale] = useState(1);
-  const [, setIsRunning] = useState(true);
+  const [isRunning, setIsRunning] = useState(true);
 
   const [gravity, setGravity] = useState(0.1);
   const [sunMass, setSunMass] = useState(10000);
@@ -27,6 +27,7 @@ function useSimulation(canvasRef: any) {
   const [zoom, setZoom] = useState(1);
   const [cameraTarget, setCameraTarget] = useState('sun');
 
+  // Refはアニメーションループ用のみに限定
   const timeScaleRef = useRef(1);
   const isRunningRef = useRef(true);
 
@@ -116,6 +117,10 @@ function useSimulation(canvasRef: any) {
       });
     }
 
+    // Refの値を最新のuseState値で同期
+    timeScaleRef.current = timeScale;
+    isRunningRef.current = isRunning;
+
     function animate() {
       // 軌跡の更新
       if (isRunningRef.current && planets.length > 0) {
@@ -129,7 +134,7 @@ function useSimulation(canvasRef: any) {
 
     animate();
     // eslint-disable-next-line
-  }, [canvasRef, gravity, sunMass, zoom, cameraTarget, planets, planetTrails]);
+  }, [canvasRef, gravity, sunMass, zoom, cameraTarget, planets, planetTrails, timeScale, isRunning]);
 
   const initializePlanets = (sun: any): PlanetType[] => {
     return [
@@ -171,14 +176,7 @@ function useSimulation(canvasRef: any) {
         planetsRef.current = newPlanets;
         setPlanets([...newPlanets]);
         resetAllTrails(newPlanets);
-        setIsRunning(false);
-        isRunningRef.current = false;
       };
-
-      const newPlanets = initializePlanets(sunRef.current);
-      planetsRef.current = newPlanets;
-      setPlanets([...newPlanets]);
-      resetAllTrails(newPlanets);
     }
 
     setGravity(0.1);
@@ -194,31 +192,27 @@ function useSimulation(canvasRef: any) {
   };
 
   const slowDown = () => {
-    if (!isRunningRef.current) return;
+    if (!isRunning) return;
     setTimeScale(prev => {
       const newScale = Math.max(0.1, Math.min(10, prev * 0.5));
-      timeScaleRef.current = newScale;
       return newScale;
     });
   };
 
   const speedUp = () => {
-    if (!isRunningRef.current) return;
+    if (!isRunning) return;
     setTimeScale(prev => {
       const newScale = Math.max(0.1, Math.min(10, prev * 2));
-      timeScaleRef.current = newScale;
       return newScale;
     });
   };
 
   const pause = () => {
     setIsRunning(false);
-    isRunningRef.current = false;
   };
 
   const resume = () => {
     setIsRunning(true);
-    isRunningRef.current = true;
   };
 
   const onGravityChange = (value: number) => {
@@ -260,8 +254,7 @@ function useSimulation(canvasRef: any) {
     planetsRef.current[index] = {
       ...planetsRef.current[index],
       ...updatedPlanet,
-      vx: 0,
-      vy: updatedPlanet.velocity ?? planetsRef.current[index].velocity,
+      // vx, vyはリセットしない
     };
     setPlanets(planetsRef.current.map((p: PlanetType) => ({ ...p })));
     if (oldName !== newName) {
@@ -279,6 +272,7 @@ function useSimulation(canvasRef: any) {
 
   return {
     timeScale,
+    isRunning,
     slowDown,
     speedUp,
     pause,

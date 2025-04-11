@@ -8,6 +8,7 @@ function App() {
 
   const {
     timeScale,
+    isRunning,
     slowDown,
     speedUp,
     pause,
@@ -33,6 +34,7 @@ function App() {
       <canvas ref={canvasRef} style={{ display: 'block' }} />
       <ControlPanel
         timeScale={timeScale}
+        isRunning={isRunning}
         onSlowDown={slowDown}
         onSpeedUp={speedUp}
         onPause={pause}

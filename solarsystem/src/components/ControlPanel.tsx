@@ -1,7 +1,7 @@
 import React from 'react';
 
 function ControlPanel({
-  timeScale, onSlowDown, onSpeedUp, onPause, onResume, onReset, onFullReset,
+  timeScale, isRunning, onSlowDown, onSpeedUp, onPause, onResume, onReset, onFullReset,
   gravity, onGravityChange,
   sunMass, onSunMassChange,
   planets, onAddPlanet, onRemovePlanet, onUpdatePlanet,
@@ -13,11 +13,15 @@ function ControlPanel({
       <div>
         <button onClick={onSlowDown}>遅く</button>
         <button onClick={onSpeedUp}>速く</button>
-        <button onClick={onPause}>停止</button>
-        <button onClick={onResume}>再開</button>
+        {isRunning ? (
+          <button onClick={onPause}>停止</button>
+        ) : (
+          <button onClick={onResume}>再開</button>
+        )}
         <button onClick={onReset}>リセット</button>
         <button onClick={onFullReset}>完全リセット</button>
         <div>時間倍率: {timeScale.toFixed(2)}</div>
+        <div>状態: {isRunning ? "再生中" : "停止中"}</div>
       </div>
 
       <hr />

@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { Planet, SimulationParameters, TimeControlParameters, ViewParameters, EditablePlanetParams } from '../types';
 
+
+import PlanetEditor, { planetTypes } from './PlanetEditor';
+import TimeControlPanel from './TimeControlPanel';
+import ViewControlPanel from './ViewControlPanel';
+
 // Define props type for ControlPanel
 type ControlPanelProps = {
   timeControl: TimeControlParameters;
@@ -22,78 +27,6 @@ type ControlPanelProps = {
   onUpdatePlanetParams: (targetId: string, updatedParams: Partial<EditablePlanetParams>) => void; // Use ID
   selectPlanetForPrediction: (id: string | null) => void; // Add prediction selection function
 };
-
-// Separate component for editing a single planet's initial parameters
-type PlanetEditorProps = {
-  planet: Planet; // Pass the full Planet object
-  onUpdate: (id: string, updatedParams: Partial<EditablePlanetParams>) => void; // Pass ID
-  onRemove: (id: string) => void; // Pass ID
-  onPredict: (id: string) => void; // Add prediction trigger function
-};
-
-// Define available planet types for the dropdown
-const planetTypes: Planet['type'][] = ['rocky', 'gas', 'dwarf', 'asteroid', 'comet'];
-
-function PlanetEditor({ planet, onUpdate, onRemove, onPredict }: PlanetEditorProps) { // Add onPredict here
-  // Extract editable parameters from the planet state
-  // Provide default values for potentially missing fields if needed, though types.ts should ensure they exist
-  const editableParams: EditablePlanetParams = {
-    name: planet.name,
-    type: planet.type,
-    radius: planet.radius,
-    color: planet.color,
-    texturePath: planet.texturePath || '', // Use empty string if undefined
-    mass: planet.mass,
-    initialOrbitalRadius: planet.initialOrbitalRadius ?? 0,
-    rotationSpeed: planet.rotationSpeed,
-  };
-
-  // Type guard for param key
-  const handleParamChange = (param: keyof EditablePlanetParams, value: string | number | undefined) => {
-      // Handle potential undefined for texturePath
-      const updateValue = param === 'texturePath' && value === '' ? undefined : value;
-      onUpdate(planet.id, { [param]: updateValue });
-  };
-
-  return (
-    <div style={{ border: '1px solid white', margin: '5px', padding: '5px' }}>
-      <div>
-        名前: <input value={editableParams.name} onChange={e => handleParamChange('name', e.target.value)} />
-      </div>
-      <div>
-        半径(表示用): <input type="number" min="1" value={editableParams.radius} onChange={e => handleParamChange('radius', parseFloat(e.target.value) || 1)} />
-      </div>
-      <div>
-        種類:
-        <select value={editableParams.type} onChange={e => handleParamChange('type', e.target.value as Planet['type'])}>
-          {planetTypes.map(type => <option key={type} value={type}>{type}</option>)}
-        </select>
-      </div>
-      <div>
-        半径(表示用): <input type="number" min="1" value={editableParams.radius} onChange={e => handleParamChange('radius', parseFloat(e.target.value) || 1)} />
-      </div>
-       <div>
-        色(ﾌｫｰﾙﾊﾞｯｸ): <input value={editableParams.color} onChange={e => handleParamChange('color', e.target.value)} />
-      </div>
-      <div>
-        ﾃｸｽﾁｬﾊﾟｽ(任意): <input placeholder="例: planets/earth.jpg" value={editableParams.texturePath} onChange={e => handleParamChange('texturePath', e.target.value)} />
-      </div>
-      <div>
-        質量: <input type="number" min="0.1" step="0.1" value={editableParams.mass} onChange={e => handleParamChange('mass', parseFloat(e.target.value) || 0.1)} />
-      </div>
-      <div>
-        初期軌道半径: <input type="number" min="10" value={editableParams.initialOrbitalRadius} onChange={e => handleParamChange('initialOrbitalRadius', parseFloat(e.target.value) || 10)} />
-      </div>
-      <div>
-        自転速度(rad/ｽﾃｯﾌﾟ): <input type="number" step="0.001" value={editableParams.rotationSpeed} onChange={e => handleParamChange('rotationSpeed', parseFloat(e.target.value) || 0)} />
-      </div>
-      {/* Velocity is calculated, not edited directly */}
-      <button onClick={() => onRemove(planet.id)}>削除</button>
-      <button onClick={() => onPredict(planet.id)} style={{marginLeft: '5px'}}>軌道予測</button> {/* Add Predict button */}
-    </div>
-  );
-}
-
 
 // Main Control Panel Component
 function ControlPanel({
@@ -143,20 +76,15 @@ function ControlPanel({
   return (
     <div style={{ position: 'fixed', top: 10, left: 10, color: 'white', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'rgba(0,0,0,0.7)', padding: '10px', borderRadius: '5px', fontSize: '14px' }}>
       {/* Time Controls */}
-      <div>
-        <h4>時間制御</h4>
-        <button onClick={onSlowDown} disabled={!timeControl.isRunning}>◀◀ 遅く</button>
-        <button onClick={onSpeedUp} disabled={!timeControl.isRunning}>▶▶ 速く</button>
-        {timeControl.isRunning ? (
-          <button onClick={onPause}>❚❚ 停止</button>
-        ) : (
-          <button onClick={onResume}>▶ 再開</button>
-        )}
-        <button onClick={onReset}>リセット</button>
-        <button onClick={onFullReset}>完全リセット</button>
-        <div>時間倍率: {timeControl.timeScale.toFixed(2)}x</div>
-        <div>状態: {timeControl.isRunning ? "再生中" : "停止中"}</div>
-      </div>
+      <TimeControlPanel
+        timeControl={timeControl}
+        onSlowDown={onSlowDown}
+        onSpeedUp={onSpeedUp}
+        onPause={onPause}
+        onResume={onResume}
+        onReset={onReset}
+        onFullReset={onFullReset}
+      />
 
       <hr />
 
@@ -176,22 +104,12 @@ function ControlPanel({
       <hr />
 
        {/* View Controls */}
-      <div>
-          <h4>表示設定</h4>
-          <div>
-            <label>ズーム: {viewParams.zoom.toFixed(2)}x</label>
-            <input type="range" min="0.1" max="5" step="0.1" value={viewParams.zoom} onChange={e => onZoomChange(parseFloat(e.target.value))} style={{width: '100px'}}/>
-          </div>
-          <div>
-            <label>視点対象:</label>
-            <select value={viewParams.cameraTarget} onChange={e => onCameraTargetChange(e.target.value)}>
-              <option value="sun">太陽</option>
-              {planets.map((planet) => (
-                <option key={planet.name} value={planet.name}>{planet.name}</option>
-              ))}
-            </select>
-          </div>
-      </div>
+      <ViewControlPanel
+        viewParams={viewParams}
+        planets={planets}
+        onZoomChange={onZoomChange}
+        onCameraTargetChange={onCameraTargetChange}
+      />
 
       <hr />
 

@@ -6,58 +6,53 @@ const MAX_TRAIL_LENGTH = 100;
 export function usePlanetTrails(initialPlanets: Planet[] = []) {
   const [planetTrails, setPlanetTrails] = useState<TrailMap>(() => {
     const initialMap: TrailMap = new Map();
+    // Initialize with planet IDs as keys
     initialPlanets.forEach(p => {
-      initialMap.set(p.name, []);
+      initialMap.set(p.id, []);
     });
     return initialMap;
   });
 
-  const addTrailPoint = useCallback((planetName: string, point: Vector2D) => {
+  // Use planet ID as the key
+  const addTrailPoint = useCallback((planetId: string, point: Vector2D) => {
     setPlanetTrails(prev => {
       const newMap = new Map(prev);
-      const trail = newMap.get(planetName) || [];
+      const trail = newMap.get(planetId) || [];
       const newTrail = [...trail, point];
       if (newTrail.length > MAX_TRAIL_LENGTH) {
         newTrail.shift(); // Remove the oldest point
       }
-      newMap.set(planetName, newTrail);
+      newMap.set(planetId, newTrail); // Use ID as key
       return newMap;
     });
   }, []);
 
+  // Reset using planet IDs
   const resetAllTrails = useCallback((planets: Planet[]) => {
     const newMap: TrailMap = new Map();
     planets.forEach(p => {
-      newMap.set(p.name, []);
+      newMap.set(p.id, []); // Use ID as key
     });
     setPlanetTrails(newMap);
   }, []);
 
-  const renameTrail = useCallback((oldName: string, newName: string) => {
+  // renameTrail is no longer needed as we use ID
+
+  // Remove trail using planet ID
+  const removeTrail = useCallback((planetId: string) => {
     setPlanetTrails(prev => {
       const newMap = new Map(prev);
-      if (newMap.has(oldName)) {
-        const trail = newMap.get(oldName)!;
-        newMap.delete(oldName);
-        newMap.set(newName, trail);
-      }
+      newMap.delete(planetId); // Use ID as key
       return newMap;
     });
   }, []);
 
-  const removeTrail = useCallback((planetName: string) => {
+  // Ensure trail exists using planet ID
+  const ensureTrailExists = useCallback((planetId: string) => {
     setPlanetTrails(prev => {
-      const newMap = new Map(prev);
-      newMap.delete(planetName);
-      return newMap;
-    });
-  }, []);
-
-  const ensureTrailExists = useCallback((planetName: string) => {
-    setPlanetTrails(prev => {
-      if (!prev.has(planetName)) {
+      if (!prev.has(planetId)) { // Use ID as key
         const newMap = new Map(prev);
-        newMap.set(planetName, []);
+        newMap.set(planetId, []); // Use ID as key
         return newMap;
       }
       return prev; // No change needed
@@ -69,7 +64,7 @@ export function usePlanetTrails(initialPlanets: Planet[] = []) {
     planetTrails,
     addTrailPoint,
     resetAllTrails,
-    renameTrail,
+    // renameTrail removed
     removeTrail,
     ensureTrailExists,
   };

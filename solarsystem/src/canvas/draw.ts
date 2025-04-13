@@ -1,54 +1,50 @@
-import { Planet, Sun, ViewParameters, TrailMap, CelestialBody, Vector2D } from '../types'; // Add Vector2D
+import { Planet, Sun, ViewParameters, TrailMap, CelestialBody, Vector2D } from '../types';
+import { loadImage, getCachedImage } from './textureLoader'; // Import from new module
 
 const STAR_COUNT = 100; // Number of background stars
 
-// Simple cache for loaded texture images
-const textureCache = new Map<string, HTMLImageElement>();
-const imageLoadPromises = new Map<string, Promise<HTMLImageElement>>();
+// Offscreen canvas for pre-rendered stars
+let starCanvas: HTMLCanvasElement | null = null;
+let starCtx: CanvasRenderingContext2D | null = null;
 
-// Function to load an image and return a promise
-function loadImage(src: string): Promise<HTMLImageElement> {
-    if (textureCache.has(src)) {
-        return Promise.resolve(textureCache.get(src)!);
+/**
+ * Pre-renders stars onto an offscreen canvas if not already done.
+ */
+function ensureStarsDrawn(width: number, height: number) {
+  // Create canvas only once or if size changes significantly (optional enhancement)
+  if (!starCanvas || starCanvas.width !== width || starCanvas.height !== height) {
+    starCanvas = document.createElement('canvas');
+    starCanvas.width = width;
+    starCanvas.height = height;
+    starCtx = starCanvas.getContext('2d');
+
+    if (!starCtx) {
+      console.error("Failed to get 2D context for star canvas");
+      starCanvas = null; // Reset if context fails
+      return;
     }
-    if (imageLoadPromises.has(src)) {
-        return imageLoadPromises.get(src)!;
+
+    // Draw stars onto the offscreen canvas
+    starCtx.fillStyle = 'rgba(200, 200, 200, 0.5)';
+    for (let i = 0; i < STAR_COUNT; i++) {
+      const x = Math.random() * width;
+      const y = Math.random() * height;
+      const radius = Math.random() * 1.2;
+      starCtx.beginPath();
+      starCtx.arc(x, y, radius, 0, Math.PI * 2);
+      starCtx.fill();
     }
-
-    const promise = new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            textureCache.set(src, img);
-            imageLoadPromises.delete(src); // Remove promise once loaded
-            resolve(img);
-        };
-        img.onerror = (err) => {
-            console.error(`Failed to load image: ${src}`, err);
-            imageLoadPromises.delete(src); // Remove promise on error
-            reject(err);
-        };
-        img.src = src; // Start loading
-    });
-
-    imageLoadPromises.set(src, promise);
-    return promise;
+  }
 }
 
 /**
- * Draws the background stars.
+ * Draws the pre-rendered stars from the offscreen canvas.
  */
 function drawStars(ctx: CanvasRenderingContext2D, width: number, height: number) {
-  ctx.save();
-  ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
-  for (let i = 0; i < STAR_COUNT; i++) {
-    const x = Math.random() * width;
-    const y = Math.random() * height;
-    const radius = Math.random() * 1.2;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fill();
+  ensureStarsDrawn(width, height); // Ensure stars are drawn on the offscreen canvas
+  if (starCanvas) {
+    ctx.drawImage(starCanvas, 0, 0); // Draw the pre-rendered canvas
   }
-  ctx.restore();
 }
 
 /**
@@ -72,8 +68,8 @@ function drawBody(
   // --- Try drawing with texture ---
   let textureDrawn = false;
   if (body.texturePath) {
-    // Check cache first
-    const cachedImage = textureCache.get(body.texturePath);
+    // Check cache first using the imported function
+    const cachedImage = getCachedImage(body.texturePath);
     if (cachedImage) {
       // Apply rotation
       ctx.translate(screenX, screenY);
@@ -87,7 +83,7 @@ function drawBody(
       );
       textureDrawn = true;
     } else {
-      // Trigger loading if not already loading/loaded
+      // Trigger loading using the imported function if not already loading/loaded
       loadImage(body.texturePath).catch(() => { /* Error handled in loadImage */ });
       // Fallback to color while loading
     }
@@ -146,7 +142,8 @@ function drawBody(
  */
 function drawTrail(
     ctx: CanvasRenderingContext2D,
-    planet: Planet,
+    planetId: string, // Use planet ID
+    planetColor: string, // Pass color separately
     trail: TrailMap,
     viewParams: ViewParameters,
     centerPos: { x: number; y: number },
@@ -154,11 +151,11 @@ function drawTrail(
     canvasHeight: number
 ) {
     const { zoom } = viewParams;
-    const path = trail.get(planet.name) || [];
+    const path = trail.get(planetId) || []; // Get trail using ID
     if (path.length < 2) return; // Need at least two points to draw a line
 
     ctx.save();
-    ctx.strokeStyle = planet.color;
+    ctx.strokeStyle = planetColor; // Use passed color
     ctx.lineWidth = Math.max(0.5, 1 * zoom); // Ensure minimum line width
     ctx.globalAlpha = 0.6; // Make trails slightly transparent
     ctx.beginPath();
@@ -256,7 +253,8 @@ export function drawSolarSystem(
 
   // Draw Planets and Trails
   planets.forEach(planet => {
-    drawTrail(ctx, planet, planetTrails, viewParams, centerPos, width, height); // Draw historical trail first
+    // Pass ID and color to drawTrail
+    drawTrail(ctx, planet.id, planet.color, planetTrails, viewParams, centerPos, width, height);
     drawBody(ctx, planet, viewParams, centerPos, width, height);
   });
 

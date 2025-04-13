@@ -34,7 +34,7 @@ export type Sun = CelestialBody & {
 
 export type TrailPoint = Vector2D;
 export type Trail = TrailPoint[];
-export type TrailMap = Map<string, Trail>; // Key: Planet name
+export type TrailMap = Map<string, Trail>; // Key: Planet ID
 
 export type SimulationParameters = {
   gravity: number;

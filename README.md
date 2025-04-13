@@ -1,70 +1,57 @@
-# Getting Started with Create React App
+# solarsystem
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## 概要
+「solarsystem」は、太陽系の惑星運動を物理シミュレーションし、Canvas上に可視化するReact + TypeScript製のWebアプリです。  
+惑星や太陽の画像を用いて、重力計算・軌道予測・衝突判定などをリアルタイムで体験できます。
 
-## Available Scripts
+## 主な機能
+- 太陽系の惑星運動シミュレーション（重力・軌道・衝突）
+- 惑星や太陽の画像表示
+- 惑星の追加・編集・削除（UIパネルから操作可能）
+- 惑星の軌道予測・軌跡表示
+- シミュレーションの一時停止・再開・リセット
+- 背景に星空を描画
 
-In the project directory, you can run:
+## 技術スタック
+- React 19 + TypeScript
+- Canvas APIによる描画
+- 独自の物理エンジン（重力・衝突・軌道計算）
+- カスタムフックによる状態管理
+- 画像アセットによる惑星表示
 
-### `npm start`
+## ディレクトリ構成
+```
+src/
+  App.tsx                ... メインコンポーネント
+  components/            ... UIコンポーネント（コントロールパネル等）
+  hooks/                 ... シミュレーション・軌道予測等のカスタムフック
+  canvas/                ... 描画・画像ローダー
+  simulationEngine.ts    ... 物理計算ロジック
+  simulationUtils.ts     ... 太陽・惑星生成ユーティリティ
+public/planets/          ... 惑星・太陽の画像アセット
+public/                  ... HTMLテンプレート等
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## セットアップ・起動方法
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+# 依存パッケージのインストール
+npm install
 
-### `npm test`
+# 開発サーバー起動
+npm start
+# ブラウザで http://localhost:3000 を開く
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+# 本番ビルド
+npm run build
 
-### `npm run build`
+# テスト実行
+npm test
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## ライセンス
+- （必要に応じて記載してください）
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## その他
+- 本アプリは教育・デモ用途を想定しています。
+- コードや機能の詳細は各ソースファイルを参照してください。

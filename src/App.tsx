@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import './App.css';
 import ControlPanel from './components/ControlPanel';
 import { useSimulation } from './hooks/useSimulation'; // Changed to named import
+import { useCanvasInteraction } from './hooks/useCanvasInteraction';
 
 function App() {
   // Correctly type the canvas ref
@@ -27,12 +28,27 @@ function App() {
     onAddPlanet,
     onRemovePlanet,
     onUpdatePlanetParams, // Use the new update function
+    onUpdatePlanetPosition, // Get the drag and drop function
     selectPlanetForPrediction, // Get the prediction selection function
   } = useSimulation(canvasRef);
 
+  // Set up canvas interaction for drag and drop
+  const { dragState } = useCanvasInteraction(
+    canvasRef,
+    planets,
+    viewParams,
+    onUpdatePlanetPosition
+  );
+
   return (
     <>
-      <canvas ref={canvasRef} style={{ display: 'block' }} />
+      <canvas 
+        ref={canvasRef} 
+        style={{ 
+          display: 'block',
+          cursor: dragState.isDragging ? 'grabbing' : 'grab'
+        }} 
+      />
       {/* Pass the structured parameters and updated functions to ControlPanel */}
       <ControlPanel
         timeControl={timeControl}

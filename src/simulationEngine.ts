@@ -1,4 +1,5 @@
 import { Planet, Sun, SimulationParameters, Vector2D } from './types';
+import { generateUUID } from './utils/uuid';
 
 /**
  * Calculates the gravitational force vector exerted by body2 on body1.
@@ -87,7 +88,7 @@ function handleCollisions(planets: Planet[]): Planet[] {
 
                 // Create the new merged planet
                 const mergedPlanet: Planet = {
-                    id: crypto.randomUUID(),
+                    id: generateUUID(),
                     name: `${largerPlanet.name} & ${smallerPlanet.name} Merger`,
                     type: largerPlanet.type, // Inherit from larger
                     radius: Math.pow(

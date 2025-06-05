@@ -5,7 +5,7 @@ import { usePlanetTrails } from './usePlanetTrails';
 import { usePrediction } from './usePrediction'; // Import the new hook
 import {
   Planet, Sun, SimulationParameters, TimeControlParameters, ViewParameters,
-  EditablePlanetParams
+  EditablePlanetParams, Vector2D
 } from '../types';
 import {
   DEFAULT_GRAVITY, DEFAULT_SUN_MASS,
@@ -333,6 +333,24 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
       });
   }, []); // Removed renameTrail dependency
 
+  // Update planet position for drag and drop
+  const onUpdatePlanetPosition = useCallback((planetId: string, newPosition: Vector2D) => {
+    setPlanets(prevPlanets => {
+      const targetIndex = prevPlanets.findIndex(p => p.id === planetId);
+      if (targetIndex === -1) return prevPlanets;
+
+      const updatedPlanet = {
+        ...prevPlanets[targetIndex],
+        position: newPosition,
+        // Reset velocity when manually positioning to avoid sudden jumps
+        velocity: { x: 0, y: 0 },
+      };
+
+      const newPlanets = [...prevPlanets];
+      newPlanets[targetIndex] = updatedPlanet;
+      return newPlanets;
+    });
+  }, []);
 
   // --- Return Values ---
   return {
@@ -361,6 +379,7 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     onAddPlanet,
     onRemovePlanet,
     onUpdatePlanetParams,
+    onUpdatePlanetPosition, // Expose drag and drop function
     selectPlanetForPrediction, // Expose function from usePrediction
   };
 }

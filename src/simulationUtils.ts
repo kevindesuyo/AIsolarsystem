@@ -1,5 +1,6 @@
 import { Planet, Sun, EditablePlanetParams, Vector2D } from './types';
 import { calculateOrbitalVelocity } from './simulationEngine';
+import { generateUUID } from './utils/uuid';
 import {
   SUN_RADIUS,
   SUN_COLOR,
@@ -12,7 +13,7 @@ import {
  */
 export function createInitialSun(canvasWidth: number, canvasHeight: number, mass: number): Sun {
   const sun: Sun = {
-    id: crypto.randomUUID(), // Use crypto.randomUUID for modern standards
+    id: generateUUID(), // Use cross-platform UUID generation
     name: 'Sun',
     type: 'star',
     radius: SUN_RADIUS,
@@ -46,7 +47,7 @@ export function createPlanetFromEditable(
   const velocity = calculateOrbitalVelocity(sun.position, position, G, sun.mass);
 
   const planet: Planet = {
-    id: crypto.randomUUID(), // Use crypto.randomUUID
+    id: generateUUID(), // Use cross-platform UUID generation
     name: params.name,
     type: params.type,
     radius: params.radius,

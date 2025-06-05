@@ -11,7 +11,7 @@ type TimeControlPanelProps = {
   onFullReset: () => void;
 };
 
-const TimeControlPanel: React.FC<TimeControlPanelProps> = ({
+const TimeControlPanel = React.memo<TimeControlPanelProps>(({
   timeControl,
   onSlowDown,
   onSpeedUp,
@@ -34,6 +34,6 @@ const TimeControlPanel: React.FC<TimeControlPanelProps> = ({
     <div>時間倍率: {timeControl.timeScale.toFixed(2)}x</div>
     <div>状態: {timeControl.isRunning ? "再生中" : "停止中"}</div>
   </div>
-);
+));
 
 export default TimeControlPanel;

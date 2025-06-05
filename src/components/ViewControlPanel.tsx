@@ -8,7 +8,7 @@ type ViewControlPanelProps = {
   onCameraTargetChange: (value: string) => void;
 };
 
-const ViewControlPanel: React.FC<ViewControlPanelProps> = ({
+const ViewControlPanel = React.memo<ViewControlPanelProps>(({
   viewParams,
   planets,
   onZoomChange,
@@ -38,6 +38,6 @@ const ViewControlPanel: React.FC<ViewControlPanelProps> = ({
       </select>
     </div>
   </div>
-);
+));
 
 export default ViewControlPanel;

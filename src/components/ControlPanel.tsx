@@ -1,8 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Planet, SimulationParameters, TimeControlParameters, ViewParameters, EditablePlanetParams } from '../types';
-
-
-import PlanetEditor, { planetTypes } from './PlanetEditor';
 import TimeControlPanel from './TimeControlPanel';
 import ViewControlPanel from './ViewControlPanel';
 import SimulationParamsPanel from './SimulationParamsPanel';
@@ -45,34 +42,6 @@ function ControlPanel({
   const handleSelectPrediction = (id: string | null) => {
     setPredictingPlanetId(id);
     selectPlanetForPrediction(id);
-  };
-
-  // State for the new planet form - include new fields
-  const [newPlanetParams, setNewPlanetParams] = useState<EditablePlanetParams>({
-    name: 'NewPlanet',
-    type: 'rocky', // Default type
-    radius: 5,
-    color: 'white',
-    texturePath: '', // Default empty
-    mass: 1,
-    initialOrbitalRadius: 200,
-    rotationSpeed: 0.01, // Default rotation
-  });
-
-  const handleAddPlanet = () => {
-    // Ensure required fields have valid values before adding
-    const paramsToAdd: EditablePlanetParams = {
-        ...newPlanetParams,
-        texturePath: newPlanetParams.texturePath || undefined, // Convert empty string back to undefined if desired by type
-    };
-    onAddPlanet(paramsToAdd);
-    // Optionally reset form or update default name for next add
-    setNewPlanetParams(prev => ({
-        ...prev,
-        name: `NewPlanet_${planets.length + 1}`,
-        // Reset other fields if needed, or keep them for quick multi-add
-        texturePath: '', // Reset texture path for next add
-    }));
   };
 
   return (

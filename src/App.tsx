@@ -2,7 +2,6 @@ import React, { useRef } from 'react';
 import './App.css';
 import ControlPanel from './components/ControlPanel';
 import { useSimulation } from './hooks/useSimulation'; // Changed to named import
-import { Planet, SimulationParameters, TimeControlParameters, ViewParameters, EditablePlanetParams } from './types'; // Import types
 
 function App() {
   // Correctly type the canvas ref

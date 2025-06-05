@@ -1,4 +1,4 @@
-import { EditablePlanetParams, Vector2D } from './types';
+import { EditablePlanetParams } from './types';
 
 // --- Simulation Constants ---
 export const DEFAULT_GRAVITY = 6.674e-3; // Adjusted G for simulation scale

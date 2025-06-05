@@ -15,12 +15,18 @@ function calculateGravitationalForce(
   const distSq = dx * dx + dy * dy;
 
   // Avoid division by zero or extremely large forces at very small distances
-  if (distSq < 1e-6) {
+  // Use minimum planetary radius to determine threshold
+  const minRadius = Math.min(body1.radius, body2.radius);
+  const minDistance = minRadius * 0.1; // 10% of smaller body's radius
+  if (distSq < minDistance * minDistance) {
     return { x: 0, y: 0 };
   }
 
+  // Add softening parameter to prevent numerical instabilities in close encounters
+  const softeningParameter = minRadius * 0.01; // 1% of smaller body's radius
+  const softenedDistSq = distSq + softeningParameter * softeningParameter;
   const dist = Math.sqrt(distSq);
-  const forceMagnitude = (G * body1.mass * body2.mass) / distSq;
+  const forceMagnitude = (G * body1.mass * body2.mass) / softenedDistSq;
 
   // Force vector components acting on body1
   const fx = forceMagnitude * (dx / dist);
@@ -73,15 +79,21 @@ function handleCollisions(planets: Planet[]): Planet[] {
                     x: (currentPlanet.mass * currentPlanet.velocity.x + otherPlanet.mass * otherPlanet.velocity.x) / combinedMass,
                     y: (currentPlanet.mass * currentPlanet.velocity.y + otherPlanet.mass * otherPlanet.velocity.y) / combinedMass,
                 };
-                // Position of the merged planet (use larger planet's position for simplicity)
-                const newPosition = largerPlanet.position;
+                // Position of the merged planet (use center of mass)
+                const newPosition: Vector2D = {
+                    x: (currentPlanet.mass * currentPlanet.position.x + otherPlanet.mass * otherPlanet.position.x) / combinedMass,
+                    y: (currentPlanet.mass * currentPlanet.position.y + otherPlanet.mass * otherPlanet.position.y) / combinedMass,
+                };
 
                 // Create the new merged planet
                 const mergedPlanet: Planet = {
                     id: crypto.randomUUID(),
                     name: `${largerPlanet.name} & ${smallerPlanet.name} Merger`,
                     type: largerPlanet.type, // Inherit from larger
-                    radius: largerPlanet.radius, // Inherit radius from larger (simplification)
+                    radius: Math.pow(
+                        Math.pow(currentPlanet.radius, 3) + Math.pow(otherPlanet.radius, 3),
+                        1/3
+                    ), // Conservation of volume: r_new = (r1³ + r2³)^(1/3)
                     color: largerPlanet.color, // Inherit color from larger
                     texturePath: largerPlanet.texturePath, // Inherit texture
                     mass: combinedMass,
@@ -207,7 +219,7 @@ export function calculateOrbitalVelocity(
   const dy = planetPosition.y - sunPosition.y;
   const r = Math.sqrt(dx * dx + dy * dy);
 
-  if (r === 0) {
+  if (r < 1e-10) {
     return { x: 0, y: 0 }; // Avoid division by zero if at the center
   }
 

@@ -5,10 +5,10 @@ import { usePlanetTrails } from './usePlanetTrails';
 import { usePrediction } from './usePrediction'; // Import the new hook
 import {
   Planet, Sun, SimulationParameters, TimeControlParameters, ViewParameters,
-  Vector2D, EditablePlanetParams
+  EditablePlanetParams
 } from '../types';
 import {
-  DEFAULT_GRAVITY, PREDICTION_STEPS, DEFAULT_SUN_MASS,
+  DEFAULT_GRAVITY, DEFAULT_SUN_MASS,
   DEFAULT_TIME_SCALE, MIN_TIME_SCALE, MAX_TIME_SCALE,
   DEFAULT_ZOOM, MIN_ZOOM, MAX_ZOOM, DEFAULT_CAMERA_TARGET,
   DEFAULT_PLANETS_PARAMS
@@ -235,12 +235,23 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
   const onAddPlanet = useCallback((params: EditablePlanetParams) => {
     if (!sun) return;
     // Ensure name is unique
-    let newName = params.name;
-    let counter = 1;
-    while (planets.some(p => p.name === newName)) {
-        newName = `${params.name}_${counter++}`;
-    }
-    const uniqueParams = {...params, name: newName};
+    const getUniqueName = (baseName: string): string => {
+      const existingNames = planets.map(p => p.name);
+      if (!existingNames.includes(baseName)) {
+        return baseName;
+      }
+      
+      for (let counter = 1; counter < 1000; counter++) {
+        const candidateName = `${baseName}_${counter}`;
+        if (!existingNames.includes(candidateName)) {
+          return candidateName;
+        }
+      }
+      return `${baseName}_${Date.now()}`; // Fallback if somehow we can't find a unique name
+    };
+    
+    const uniqueName = getUniqueName(params.name);
+    const uniqueParams = {...params, name: uniqueName};
 
     const newPlanet = createPlanetFromEditable(uniqueParams, sun, simulationParams.gravity);
     setPlanets(prev => [...prev, newPlanet]);
@@ -277,14 +288,27 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
           };
 
           // Ensure name uniqueness if changed
-          let finalName = mergedParams.name;
-          if (updatedParams.name && updatedParams.name !== oldPlanet.name) {
-              let counter = 1;
-              // Check against other planets using ID comparison
-              while (prevPlanets.some(p => p.id !== targetId && p.name === finalName)) {
-                  finalName = `${updatedParams.name}_${counter++}`;
+          const getUniqueNameForUpdate = (baseName: string, currentId: string): string => {
+            const existingNames = prevPlanets
+              .filter(p => p.id !== currentId)
+              .map(p => p.name);
+            
+            if (!existingNames.includes(baseName)) {
+              return baseName;
+            }
+            
+            for (let counter = 1; counter < 1000; counter++) {
+              const candidateName = `${baseName}_${counter}`;
+              if (!existingNames.includes(candidateName)) {
+                return candidateName;
               }
-          }
+            }
+            return `${baseName}_${Date.now()}`; // Fallback
+          };
+
+          const finalName = updatedParams.name && updatedParams.name !== oldPlanet.name
+            ? getUniqueNameForUpdate(updatedParams.name, targetId)
+            : mergedParams.name;
 
           // Create the updated Planet object, keeping non-editable fields
           const updatedPlanet: Planet = {

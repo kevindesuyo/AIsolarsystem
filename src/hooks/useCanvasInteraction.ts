@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Vector2D, Planet, ViewParameters } from '../types';
 
 export type DragState = {
@@ -19,7 +19,7 @@ export type CanvasInteractionHandlers = {
  * キャンバス上でのマウスインタラクション（ドラッグ&ドロップ、クリック）を管理するhook
  */
 export function useCanvasInteraction(
-  canvasRef: React.RefObject<HTMLCanvasElement>,
+  canvasRef: React.RefObject<HTMLCanvasElement | null>,
   planets: Planet[],
   viewParams: ViewParameters,
   onUpdatePlanetPosition: (planetId: string, newPosition: Vector2D) => void,
@@ -161,7 +161,7 @@ export function useCanvasInteraction(
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [handleMouseDown, handleMouseMove, handleMouseUp]);
+  }, [canvasRef, handleMouseDown, handleMouseMove, handleMouseUp]);
 
   return {
     dragState,

@@ -1,5 +1,6 @@
 import { Planet, Sun, ViewParameters, TrailMap, CelestialBody, Vector2D } from '../types';
 import { loadImage, getCachedImage } from './textureLoader'; // Import from new module
+import { ParticleManager } from './particles';
 
 const STAR_COUNT = 100; // Number of background stars
 
@@ -228,7 +229,8 @@ export function drawSolarSystem(
   planets: Planet[],
   viewParams: ViewParameters,
   planetTrails: TrailMap,
-  predictedPath: Vector2D[] // Add predictedPath parameter
+  predictedPath: Vector2D[], // Add predictedPath parameter
+  particleManager?: ParticleManager // Add particle manager parameter
 ) {
   // Clear canvas
   ctx.fillStyle = 'black';
@@ -260,4 +262,9 @@ export function drawSolarSystem(
 
   // Draw Predicted Path (if any)
   drawPredictionPath(ctx, predictedPath, viewParams, centerPos, width, height);
+
+  // Draw Particles (if particle manager is provided)
+  if (particleManager) {
+    particleManager.draw(ctx, viewParams, centerPos, width, height);
+  }
 }

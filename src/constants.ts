@@ -99,6 +99,16 @@ export const DEFAULT_PLANETS_PARAMS: EditablePlanetParams[] = [
     mass: 17.1,
     initialOrbitalRadius: 4500, // 30.07AU
     rotationSpeed: 0.032
+  },
+  {
+    name: 'Halley',
+    type: 'comet',
+    radius: 2, // 小さな彗星
+    color: '#87CEEB',
+    texturePath: '', // テクスチャ未用意
+    mass: 0.001,
+    initialOrbitalRadius: 300, // 楕円軌道の近日点
+    rotationSpeed: 0.05
   }
 ];
 

@@ -3,6 +3,7 @@ import { drawSolarSystem } from '../canvas/draw';
 import { updateSimulationState } from '../simulationEngine';
 import { usePlanetTrails } from './usePlanetTrails';
 import { usePrediction } from './usePrediction'; // Import the new hook
+import { ParticleManager } from '../canvas/particles';
 import {
   Planet, Sun, SimulationParameters, TimeControlParameters, ViewParameters,
   EditablePlanetParams, Vector2D
@@ -34,6 +35,9 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
 
   const [sun, setSun] = useState<Sun | null>(null);
   const [planets, setPlanets] = useState<Planet[]>([]);
+
+  // Particle system management
+  const particleManagerRef = useRef<ParticleManager>(new ParticleManager());
 
   // Use the custom hook for trails (renameTrail is removed)
   const {
@@ -78,6 +82,18 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     );
     setPlanets(initialPlanets);
     resetAllTrails(initialPlanets); // Initialize trails
+
+    // Initialize particle effects
+    const particleManager = particleManagerRef.current;
+    particleManager.clear();
+    particleManager.toggleEffect(initialSun.id, 'star', true); // Enable solar corona
+    
+    // Enable comet tails for comet-type planets
+    initialPlanets.forEach(planet => {
+      if (planet.type === 'comet') {
+        particleManager.toggleEffect(planet.id, 'comet', true);
+      }
+    });
 
     // Cleanup function to cancel animation frame on unmount
     return () => {
@@ -130,6 +146,14 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
         // Update the actual state (triggers re-render if needed, but animation loop continues regardless)
         // Debounce or throttle this if performance becomes an issue
          setPlanets(updatedPlanets);
+
+        // Update particle systems
+        const celestialBodies = new Map();
+        celestialBodies.set(currentSun.id, currentSun);
+        updatedPlanets.forEach(planet => {
+          celestialBodies.set(planet.id, planet);
+        });
+        particleManagerRef.current.update(celestialBodies, currentTimeControl.timeScale);
       }
 
       // Draw the system
@@ -141,7 +165,8 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
         updatedPlanets, // Draw the newly calculated positions
         currentViewParams,
         currentTrails,
-        currentPredictedPath // Pass predicted path to draw function
+        currentPredictedPath, // Pass predicted path to draw function
+        particleManagerRef.current // Pass particle manager to draw function
       );
 
       animationFrameId.current = requestAnimationFrame(animate);
@@ -189,6 +214,16 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     setPlanets(initialPlanets);
     resetAllTrails(initialPlanets);
     setTimeControl({ timeScale: DEFAULT_TIME_SCALE, isRunning: true });
+
+    // Reset particle effects
+    const particleManager = particleManagerRef.current;
+    particleManager.clear();
+    particleManager.toggleEffect(sun.id, 'star', true);
+    initialPlanets.forEach(planet => {
+      if (planet.type === 'comet') {
+        particleManager.toggleEffect(planet.id, 'comet', true);
+      }
+    });
   }, [sun, simulationParams.gravity, resetAllTrails]);
 
   const fullReset = useCallback(() => {
@@ -212,6 +247,16 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     setSun(newSun);
     setPlanets(newPlanets);
     resetAllTrails(newPlanets);
+
+    // Reset particle effects
+    const particleManager = particleManagerRef.current;
+    particleManager.clear();
+    particleManager.toggleEffect(newSun.id, 'star', true);
+    newPlanets.forEach(planet => {
+      if (planet.type === 'comet') {
+        particleManager.toggleEffect(planet.id, 'comet', true);
+      }
+    });
   }, [canvasRef, resetAllTrails]);
 
   const onGravityChange = useCallback((value: number) => {
@@ -256,15 +301,26 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     const newPlanet = createPlanetFromEditable(uniqueParams, sun, simulationParams.gravity);
     setPlanets(prev => [...prev, newPlanet]);
     ensureTrailExists(newPlanet.id); // Ensure trail map has entry using ID
+    
+    // Add particle effect if it's a comet
+    if (newPlanet.type === 'comet') {
+      particleManagerRef.current.toggleEffect(newPlanet.id, 'comet', true);
+    }
   }, [sun, planets, simulationParams.gravity, ensureTrailExists]);
 
   // Remove planet using ID (Need to find ID first, or change ControlPanel to pass ID)
   // For now, let's assume ControlPanel passes ID. If not, we need to adjust ControlPanel or find ID here.
   // Let's modify this to expect an ID.
   const onRemovePlanet = useCallback((planetId: string) => {
+    const planet = planets.find(p => p.id === planetId);
     setPlanets(prev => prev.filter(p => p.id !== planetId));
     removeTrail(planetId); // Remove trail data using ID
-  }, [removeTrail]);
+    
+    // Remove particle effect if it was a comet
+    if (planet?.type === 'comet') {
+      particleManagerRef.current.toggleEffect(planetId, 'comet', false);
+    }
+  }, [removeTrail, planets]);
 
   // Update only initial editable parameters.
   const onUpdatePlanetParams = useCallback((targetId: string, updatedParams: Partial<EditablePlanetParams>) => {
@@ -326,6 +382,21 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
 
           const newPlanets = [...prevPlanets];
           newPlanets[targetIndex] = updatedPlanet;
+
+          // Handle particle effect changes if type changed
+          if (updatedParams.type && updatedParams.type !== oldPlanet.type) {
+            const particleManager = particleManagerRef.current;
+            
+            // Remove old effect
+            if (oldPlanet.type === 'comet') {
+              particleManager.toggleEffect(targetId, 'comet', false);
+            }
+            
+            // Add new effect
+            if (updatedParams.type === 'comet') {
+              particleManager.toggleEffect(targetId, 'comet', true);
+            }
+          }
 
           // No need to rename trail as we use ID now
 

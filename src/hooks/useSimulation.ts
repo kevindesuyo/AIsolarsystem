@@ -57,6 +57,7 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
 
   // Ref for animation loop to access latest state without triggering effect re-runs
   const animationFrameId = useRef<number | null>(null);
+  const trailUpdateCounter = useRef<number>(0); // Counter for trail update throttling
   // Remove prediction state from latestState ref
   const latestState = useRef({ sun, planets, simulationParams, timeControl, viewParams, planetTrails, predictedPath });
 
@@ -138,10 +139,13 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
           currentTimeControl.timeScale
         );
 
-        // Update trails after position update using planet ID
-        updatedPlanets.forEach(p => {
-          addTrailPoint(p.id, p.position); // Use ID
-        });
+        // Update trails after position update using planet ID (throttled for better performance)
+        trailUpdateCounter.current++;
+        if (trailUpdateCounter.current % 2 === 0) { // Update trails every 2 frames for smoother fade
+          updatedPlanets.forEach(p => {
+            addTrailPoint(p.id, p.position); // Use ID
+          });
+        }
 
         // Update the actual state (triggers re-render if needed, but animation loop continues regardless)
         // Debounce or throttle this if performance becomes an issue

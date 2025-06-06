@@ -139,7 +139,41 @@ function drawBody(
 }
 
 /**
- * Draws the orbital trail for a planet.
+ * Helper function to parse hex color to RGB components
+ */
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
+/**
+ * Helper function to parse CSS color name to RGB (basic colors only)
+ */
+function nameToRgb(colorName: string): { r: number; g: number; b: number } | null {
+    const colorMap: { [key: string]: { r: number; g: number; b: number } } = {
+        'red': { r: 255, g: 0, b: 0 },
+        'green': { r: 0, g: 128, b: 0 },
+        'blue': { r: 0, g: 0, b: 255 },
+        'yellow': { r: 255, g: 255, b: 0 },
+        'orange': { r: 255, g: 165, b: 0 },
+        'purple': { r: 128, g: 0, b: 128 },
+        'pink': { r: 255, g: 192, b: 203 },
+        'cyan': { r: 0, g: 255, b: 255 },
+        'magenta': { r: 255, g: 0, b: 255 },
+        'gray': { r: 128, g: 128, b: 128 },
+        'grey': { r: 128, g: 128, b: 128 },
+        'white': { r: 255, g: 255, b: 255 },
+        'black': { r: 0, g: 0, b: 0 },
+    };
+    return colorMap[colorName.toLowerCase()] || null;
+}
+
+/**
+ * Draws the orbital trail for a planet with fade-out effect.
  */
 function drawTrail(
     ctx: CanvasRenderingContext2D,
@@ -156,25 +190,45 @@ function drawTrail(
     if (path.length < 2) return; // Need at least two points to draw a line
 
     ctx.save();
-    ctx.strokeStyle = planetColor; // Use passed color
-    ctx.lineWidth = Math.max(0.5, 1 * zoom); // Ensure minimum line width
-    ctx.globalAlpha = 0.6; // Make trails slightly transparent
-    ctx.beginPath();
 
-    // Move to the first point
-    ctx.moveTo(
-        (path[0].x - centerPos.x) * zoom + canvasWidth / 2,
-        (path[0].y - centerPos.y) * zoom + canvasHeight / 2
-    );
-
-    // Draw lines to subsequent points
-    for (let i = 1; i < path.length; i++) {
-        ctx.lineTo(
-            (path[i].x - centerPos.x) * zoom + canvasWidth / 2,
-            (path[i].y - centerPos.y) * zoom + canvasHeight / 2
-        );
+    // Parse planet color to RGB for fade effect
+    let rgb = hexToRgb(planetColor) || nameToRgb(planetColor);
+    if (!rgb) {
+        // Fallback to a default color if parsing fails
+        rgb = { r: 255, g: 255, b: 255 };
     }
-    ctx.stroke();
+
+    const lineWidth = Math.max(0.5, 1 * zoom); // Ensure minimum line width
+    const totalPoints = path.length;
+
+    // Draw trail segments with increasing opacity towards the end
+    for (let i = 1; i < totalPoints; i++) {
+        const prevPoint = path[i - 1];
+        const currentPoint = path[i];
+
+        // Calculate screen coordinates
+        const prevX = (prevPoint.x - centerPos.x) * zoom + canvasWidth / 2;
+        const prevY = (prevPoint.y - centerPos.y) * zoom + canvasHeight / 2;
+        const currentX = (currentPoint.x - centerPos.x) * zoom + canvasWidth / 2;
+        const currentY = (currentPoint.y - centerPos.y) * zoom + canvasHeight / 2;
+
+        // Calculate alpha based on position in trail (fade from start to end)
+        const normalizedPosition = i / (totalPoints - 1); // 0 to 1
+        const alpha = Math.pow(normalizedPosition, 0.7) * 0.8; // Non-linear fade, max 0.8 opacity
+
+        // Set style for this segment
+        ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+        ctx.lineWidth = lineWidth * (0.3 + normalizedPosition * 0.7); // Also fade line width
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Draw this segment
+        ctx.beginPath();
+        ctx.moveTo(prevX, prevY);
+        ctx.lineTo(currentX, currentY);
+        ctx.stroke();
+    }
+
     ctx.restore();
 }
 

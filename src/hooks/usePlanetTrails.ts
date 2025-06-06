@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Planet, TrailMap, Vector2D } from '../types';
 
-const MAX_TRAIL_LENGTH = 100;
+const MAX_TRAIL_LENGTH = 150; // Increased for better fade effect visibility
 
 export function usePlanetTrails(initialPlanets: Planet[] = []) {
   const [planetTrails, setPlanetTrails] = useState<TrailMap>(() => {

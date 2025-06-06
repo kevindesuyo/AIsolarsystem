@@ -132,12 +132,25 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
       let updatedPlanets = currentPlanets;
       if (currentTimeControl.isRunning && currentPlanets.length > 0) {
         // Update simulation state using the engine
-        updatedPlanets = updateSimulationState(
+        const simulationResult = updateSimulationState(
           currentSun,
           currentPlanets,
           currentSimParams,
           currentTimeControl.timeScale
         );
+        updatedPlanets = simulationResult.planets;
+
+        // Handle collision explosions
+        if (simulationResult.collisions.length > 0) {
+          simulationResult.collisions.forEach(collision => {
+            particleManagerRef.current.createExplosion(
+              collision.position,
+              collision.radius,
+              collision.color1,
+              collision.color2
+            );
+          });
+        }
 
         // Update trails after position update using planet ID (throttled for better performance)
         trailUpdateCounter.current++;

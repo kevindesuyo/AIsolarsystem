@@ -13,11 +13,12 @@ export type Particle = {
 
 export type ParticleSystem = {
   particles: Particle[];
-  type: 'comet_tail' | 'solar_corona';
+  type: 'comet_tail' | 'solar_corona' | 'explosion';
   sourceBodyId: string;
   maxParticles: number;
   emissionRate: number; // particles per frame
   lastEmissionTime: number;
+  creationTime?: number; // For one-time effects like explosions
 };
 
 export class ParticleManager {
@@ -52,6 +53,54 @@ export class ParticleManager {
       lastEmissionTime: 0,
     };
     this.systems.set(`corona_${sunId}`, system);
+  }
+
+  /**
+   * 衝突時の爆発エフェクトを作成
+   */
+  createExplosion(position: Vector2D, radius: number, color1: string, color2: string): void {
+    const explosionId = `explosion_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const system: ParticleSystem = {
+      particles: [],
+      type: 'explosion',
+      sourceBodyId: explosionId,
+      maxParticles: Math.min(150, Math.max(30, Math.floor(radius * 2))), // Scale with collision size
+      emissionRate: 0, // All particles created at once
+      lastEmissionTime: 0,
+      creationTime: Date.now(),
+    };
+
+    // Create all explosion particles immediately
+    const particleCount = system.maxParticles;
+    const colors = [color1, color2, '#ffffff', '#ffff00', '#ff8000']; // Mix of collision colors plus white/yellow/orange
+
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
+      const speed = 20 + Math.random() * 40; // Random speed for explosion spread
+      const particleRadius = radius * (0.5 + Math.random() * 1.5); // Vary by collision size
+      
+      const particle: Particle = {
+        id: `explosion_particle_${this.particleIdCounter++}`,
+        position: {
+          x: position.x + (Math.random() - 0.5) * radius * 0.2, // Small random offset from collision center
+          y: position.y + (Math.random() - 0.5) * radius * 0.2,
+        },
+        velocity: {
+          x: Math.cos(angle) * speed + (Math.random() - 0.5) * 10,
+          y: Math.sin(angle) * speed + (Math.random() - 0.5) * 10,
+        },
+        life: 1.0,
+        maxLife: 40 + Math.random() * 60, // 40-100 frames
+        size: 1 + Math.random() * 3,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: 0.8 + Math.random() * 0.2,
+      };
+      
+      system.particles.push(particle);
+    }
+
+    this.systems.set(explosionId, system);
   }
 
   /**
@@ -135,22 +184,34 @@ export class ParticleManager {
    * パーティクルシステムを更新
    */
   update(celestialBodies: Map<string, CelestialBody>, timeScale: number): void {
+    const currentTime = Date.now();
+    
     for (const [systemKey, system] of this.systems) {
-      const body = celestialBodies.get(system.sourceBodyId);
-      if (!body) {
-        // Body no longer exists, remove system
-        this.systems.delete(systemKey);
-        continue;
-      }
+      // Handle explosion systems differently (they don't have a source body)
+      if (system.type === 'explosion') {
+        // Remove explosion systems that are too old (cleanup)
+        if (system.creationTime && currentTime - system.creationTime > 10000) { // 10 seconds
+          this.systems.delete(systemKey);
+          continue;
+        }
+        // Explosions don't emit new particles, only update existing ones
+      } else {
+        const body = celestialBodies.get(system.sourceBodyId);
+        if (!body) {
+          // Body no longer exists, remove system
+          this.systems.delete(systemKey);
+          continue;
+        }
 
-      // Emit new particles
-      if (system.particles.length < system.maxParticles) {
-        const emitCount = Math.floor(system.emissionRate * Math.max(0.1, timeScale));
-        for (let i = 0; i < emitCount; i++) {
-          if (system.type === 'comet_tail') {
-            this.emitCometTailParticle(body as Planet, system);
-          } else if (system.type === 'solar_corona') {
-            this.emitSolarCoronaParticle(body, system);
+        // Emit new particles (only for continuous effects, not explosions)
+        if (system.particles.length < system.maxParticles) {
+          const emitCount = Math.floor(system.emissionRate * Math.max(0.1, timeScale));
+          for (let i = 0; i < emitCount; i++) {
+            if (system.type === 'comet_tail') {
+              this.emitCometTailParticle(body as Planet, system);
+            } else if (system.type === 'solar_corona') {
+              this.emitSolarCoronaParticle(body, system);
+            }
           }
         }
       }
@@ -171,10 +232,17 @@ export class ParticleManager {
         // Fade alpha based on life
         particle.alpha = particle.life * (0.3 + Math.random() * 0.4);
 
-        // For comet tail particles, slow down over time
+        // Apply physics based on particle type
         if (system.type === 'comet_tail') {
+          // Comet tail particles slow down over time
           particle.velocity.x *= 0.98;
           particle.velocity.y *= 0.98;
+        } else if (system.type === 'explosion') {
+          // Explosion particles slow down more and have gravity-like effect
+          particle.velocity.x *= 0.95;
+          particle.velocity.y *= 0.95;
+          // Slight upward acceleration (like hot gases rising)
+          particle.velocity.y -= 0.5;
         }
 
         return true;
@@ -207,13 +275,30 @@ export class ParticleManager {
           continue;
         }
 
-        const screenSize = Math.max(0.5, particle.size * zoom);
+        let screenSize = Math.max(0.5, particle.size * zoom);
+        
+        // Special rendering for explosion particles
+        if (system.type === 'explosion') {
+          // Explosion particles grow then shrink over their lifetime
+          const lifeFactor = 1 - particle.life; // 0 to 1 as particle ages
+          const sizeFactor = lifeFactor < 0.3 ? lifeFactor / 0.3 : (1 - lifeFactor) / 0.7;
+          screenSize *= (0.5 + sizeFactor * 1.5); // Size varies from 0.5x to 2x
+          
+          // Add glow effect for explosion particles
+          ctx.shadowBlur = screenSize * 2;
+          ctx.shadowColor = particle.color;
+        }
 
         ctx.globalAlpha = particle.alpha;
         ctx.fillStyle = particle.color;
         ctx.beginPath();
         ctx.arc(screenX, screenY, screenSize, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Reset shadow for next particles
+        if (system.type === 'explosion') {
+          ctx.shadowBlur = 0;
+        }
       }
     }
 

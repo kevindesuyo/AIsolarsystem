@@ -1,6 +1,13 @@
 import { Planet, Sun, SimulationParameters, Vector2D } from './types';
 import { generateUUID } from './utils/uuid';
 
+export type CollisionInfo = {
+  position: Vector2D;
+  radius: number;
+  color1: string;
+  color2: string;
+};
+
 /**
  * Calculates the gravitational force vector exerted by body2 on body1.
  * F = G * m1 * m2 / r^2
@@ -41,10 +48,11 @@ function calculateGravitationalForce(
  * Handles collisions between planets in the given list.
  * Assumes perfectly inelastic collisions (mergers).
  * @param planets List of planets after position/velocity update for the timestep.
- * @returns A new list of planets where collided planets are replaced by merged ones.
+ * @returns Object containing the new list of planets and collision information.
  */
-function handleCollisions(planets: Planet[]): Planet[] {
+function handleCollisions(planets: Planet[]): { planets: Planet[]; collisions: CollisionInfo[] } {
     const finalPlanets: Planet[] = [];
+    const collisions: CollisionInfo[] = [];
     const collidedIds = new Set<string>(); // Keep track of planets already involved in a collision this step
 
     for (let i = 0; i < planets.length; i++) {
@@ -68,6 +76,17 @@ function handleCollisions(planets: Planet[]): Planet[] {
                 collidedIds.add(currentPlanet.id);
                 collidedIds.add(otherPlanet.id);
                 collisionOccurred = true; // Mark that the currentPlanet was involved
+
+                // Record collision information for explosion effect
+                collisions.push({
+                    position: {
+                        x: (currentPlanet.position.x + otherPlanet.position.x) / 2,
+                        y: (currentPlanet.position.y + otherPlanet.position.y) / 2,
+                    },
+                    radius: Math.max(currentPlanet.radius, otherPlanet.radius),
+                    color1: currentPlanet.color,
+                    color2: otherPlanet.color,
+                });
 
                 // Determine larger planet (by mass)
                 const largerPlanet = currentPlanet.mass >= otherPlanet.mass ? currentPlanet : otherPlanet;
@@ -122,7 +141,7 @@ function handleCollisions(planets: Planet[]): Planet[] {
         }
     }
 
-    return finalPlanets;
+    return { planets: finalPlanets, collisions };
 }
 
 
@@ -132,16 +151,16 @@ function handleCollisions(planets: Planet[]): Planet[] {
  * @param planets The current array of planets.
  * @param params Simulation parameters (gravity G).
  * @param timeStep The time elapsed in this step (timeScale).
- * @returns The updated array of planets after physics and collisions.
+ * @returns Object containing the updated planets and collision information.
  */
 export function updateSimulationState(
   sun: Sun,
   planets: Planet[],
   params: SimulationParameters,
   timeStep: number
-): Planet[] {
+): { planets: Planet[]; collisions: CollisionInfo[] } {
   if (timeStep <= 0 || planets.length === 0) {
-    return planets; // No update if time is paused, reversed, or no planets
+    return { planets, collisions: [] }; // No update if time is paused, reversed, or no planets
   }
 
   const G = params.gravity;
@@ -194,9 +213,9 @@ export function updateSimulationState(
   });
 
   // 2. Handle collisions among the updated planets
-  const finalPlanets = handleCollisions(updatedPlanets);
+  const collisionResult = handleCollisions(updatedPlanets);
 
-  return finalPlanets;
+  return collisionResult;
 }
 
 

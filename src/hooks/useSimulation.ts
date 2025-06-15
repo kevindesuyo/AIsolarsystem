@@ -4,6 +4,7 @@ import { updateSimulationState } from '../simulationEngine';
 import { usePlanetTrails } from './usePlanetTrails';
 import { usePrediction } from './usePrediction'; // Import the new hook
 import { ParticleManager } from '../canvas/particles';
+import { calculatePhysicsQuantities, PhysicsQuantities } from '../utils/physics';
 import {
   Planet, Sun, SimulationParameters, TimeControlParameters, ViewParameters,
   EditablePlanetParams, Vector2D
@@ -39,6 +40,9 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
   // Particle system management
   const particleManagerRef = useRef<ParticleManager>(new ParticleManager());
 
+  // Physics quantities state
+  const [physicsQuantities, setPhysicsQuantities] = useState<PhysicsQuantities | null>(null);
+
   // Use the custom hook for trails (renameTrail is removed)
   const {
     planetTrails,
@@ -58,14 +62,15 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
   // Ref for animation loop to access latest state without triggering effect re-runs
   const animationFrameId = useRef<number | null>(null);
   const trailUpdateCounter = useRef<number>(0); // Counter for trail update throttling
+  const physicsUpdateCounter = useRef<number>(0); // Counter for physics calculation throttling
   // Remove prediction state from latestState ref
-  const latestState = useRef({ sun, planets, simulationParams, timeControl, viewParams, planetTrails, predictedPath });
+  const latestState = useRef({ sun, planets, simulationParams, timeControl, viewParams, planetTrails, predictedPath, physicsQuantities });
 
   // Update latestState ref whenever state changes
   useEffect(() => {
     // Update ref with current state including predictedPath from usePrediction
-    latestState.current = { sun, planets, simulationParams, timeControl, viewParams, planetTrails, predictedPath };
-  }, [sun, planets, simulationParams, timeControl, viewParams, planetTrails, predictedPath]); // Add predictedPath dependency
+    latestState.current = { sun, planets, simulationParams, timeControl, viewParams, planetTrails, predictedPath, physicsQuantities };
+  }, [sun, planets, simulationParams, timeControl, viewParams, planetTrails, predictedPath, physicsQuantities]); // Add physicsQuantities dependency
 
 
   // --- Initialization ---
@@ -95,6 +100,10 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
         particleManager.toggleEffect(planet.id, 'comet', true);
       }
     });
+
+    // Calculate initial physics quantities
+    const initialPhysics = calculatePhysicsQuantities(initialSun, initialPlanets, simulationParams.gravity);
+    setPhysicsQuantities(initialPhysics);
 
     // Cleanup function to cancel animation frame on unmount
     return () => {
@@ -171,6 +180,13 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
           celestialBodies.set(planet.id, planet);
         });
         particleManagerRef.current.update(celestialBodies, currentTimeControl.timeScale);
+
+        // Update physics quantities (throttled for performance)
+        physicsUpdateCounter.current++;
+        if (physicsUpdateCounter.current % 10 === 0) { // Update physics every 10 frames
+          const newPhysics = calculatePhysicsQuantities(currentSun, updatedPlanets, currentSimParams.gravity);
+          setPhysicsQuantities(newPhysics);
+        }
       }
 
       // Draw the system
@@ -241,6 +257,12 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
         particleManager.toggleEffect(planet.id, 'comet', true);
       }
     });
+
+    // Recalculate physics quantities
+    if (sun) {
+      const newPhysics = calculatePhysicsQuantities(sun, initialPlanets, simulationParams.gravity);
+      setPhysicsQuantities(newPhysics);
+    }
   }, [sun, simulationParams.gravity, resetAllTrails]);
 
   const fullReset = useCallback(() => {
@@ -274,6 +296,10 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
         particleManager.toggleEffect(planet.id, 'comet', true);
       }
     });
+
+    // Recalculate physics quantities
+    const newPhysics = calculatePhysicsQuantities(newSun, newPlanets, newSimParams.gravity);
+    setPhysicsQuantities(newPhysics);
   }, [canvasRef, resetAllTrails]);
 
   const onGravityChange = useCallback((value: number) => {
@@ -447,6 +473,7 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     planets,
     planetTrails,
     predictedPath, // Pass prediction path
+    physicsQuantities, // Pass physics calculations
 
     // Parameters & Controls
     simulationParams,

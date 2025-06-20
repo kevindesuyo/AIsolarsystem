@@ -20,19 +20,57 @@ const TimeControlPanel = React.memo<TimeControlPanelProps>(({
   onReset,
   onFullReset,
 }) => (
-  <div>
-    <h4>時間制御</h4>
-    <button onClick={onSlowDown} disabled={!timeControl.isRunning}>◀◀ 遅く</button>
-    <button onClick={onSpeedUp} disabled={!timeControl.isRunning}>▶▶ 速く</button>
+  <div role="region" aria-labelledby="time-control-heading">
+    <h4 id="time-control-heading">時間制御</h4>
+    <button 
+      onClick={onSlowDown} 
+      disabled={!timeControl.isRunning}
+      aria-label="シミュレーション速度を遅くする"
+      title="シミュレーション速度を遅くする"
+    >
+      ◀◀ 遅く
+    </button>
+    <button 
+      onClick={onSpeedUp} 
+      disabled={!timeControl.isRunning}
+      aria-label="シミュレーション速度を速くする"
+      title="シミュレーション速度を速くする"
+    >
+      ▶▶ 速く
+    </button>
     {timeControl.isRunning ? (
-      <button onClick={onPause}>❚❚ 停止</button>
+      <button 
+        onClick={onPause}
+        aria-label="シミュレーションを一時停止する"
+        title="シミュレーションを一時停止する"
+      >
+        ❚❚ 停止
+      </button>
     ) : (
-      <button onClick={onResume}>▶ 再開</button>
+      <button 
+        onClick={onResume}
+        aria-label="シミュレーションを再開する"
+        title="シミュレーションを再開する"
+      >
+        ▶ 再開
+      </button>
     )}
-    <button onClick={onReset}>リセット</button>
-    <button onClick={onFullReset}>完全リセット</button>
-    <div>時間倍率: {timeControl.timeScale.toFixed(2)}x</div>
-    <div>状態: {timeControl.isRunning ? "再生中" : "停止中"}</div>
+    <button 
+      onClick={onReset}
+      aria-label="惑星の位置をリセットする"
+      title="惑星の位置をリセットする"
+    >
+      リセット
+    </button>
+    <button 
+      onClick={onFullReset}
+      aria-label="全ての設定をリセットする"
+      title="全ての設定をリセットする"
+    >
+      完全リセット
+    </button>
+    <div aria-live="polite">時間倍率: {timeControl.timeScale.toFixed(2)}x</div>
+    <div aria-live="polite">状態: {timeControl.isRunning ? "再生中" : "停止中"}</div>
   </div>
 ));
 

@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { Vector2D, Planet, ViewParameters } from '../types';
 
 export type DragState = {
@@ -32,17 +32,31 @@ export function useCanvasInteraction(
     dragOffset: null,
   });
 
+  // Use refs to avoid frequent re-creation of event handlers
+  const planetsRef = useRef(planets);
+  const viewParamsRef = useRef(viewParams);
+  const onUpdatePlanetPositionRef = useRef(onUpdatePlanetPosition);
+  const onCanvasClickCallbackRef = useRef(onCanvasClickCallback);
+
+  // Update refs when props change
+  useEffect(() => {
+    planetsRef.current = planets;
+    viewParamsRef.current = viewParams;
+    onUpdatePlanetPositionRef.current = onUpdatePlanetPosition;
+    onCanvasClickCallbackRef.current = onCanvasClickCallback;
+  }, [planets, viewParams, onUpdatePlanetPosition, onCanvasClickCallback]);
+
   // マウス座標をワールド座標に変換
   const screenToWorld = useCallback((screenPos: Vector2D, centerPos: Vector2D): Vector2D => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
 
-    const { zoom } = viewParams;
+    const { zoom } = viewParamsRef.current;
     return {
       x: (screenPos.x - canvas.width / 2) / zoom + centerPos.x,
       y: (screenPos.y - canvas.height / 2) / zoom + centerPos.y,
     };
-  }, [canvasRef, viewParams]);
+  }, [canvasRef]);
 
   // マウス座標をキャンバス相対座標に変換
   const getCanvasRelativePos = useCallback((e: MouseEvent): Vector2D => {
@@ -58,7 +72,7 @@ export function useCanvasInteraction(
 
   // 惑星がクリックされたかを判定
   const findClickedPlanet = useCallback((worldPos: Vector2D): Planet | null => {
-    for (const planet of planets) {
+    for (const planet of planetsRef.current) {
       const dx = worldPos.x - planet.position.x;
       const dy = worldPos.y - planet.position.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
@@ -68,7 +82,7 @@ export function useCanvasInteraction(
       }
     }
     return null;
-  }, [planets]);
+  }, []);
 
   // マウスダウンイベントハンドラ
   const handleMouseDown = useCallback((e: MouseEvent) => {
@@ -79,8 +93,8 @@ export function useCanvasInteraction(
     
     // カメラターゲットに応じた中心位置を計算
     let centerPos = { x: 0, y: 0 }; // 太陽の位置をデフォルトとして使用
-    if (viewParams.cameraTarget !== 'sun') {
-      const targetPlanet = planets.find(p => p.name === viewParams.cameraTarget);
+    if (viewParamsRef.current.cameraTarget !== 'sun') {
+      const targetPlanet = planetsRef.current.find(p => p.name === viewParamsRef.current.cameraTarget);
       if (targetPlanet) {
         centerPos = { x: targetPlanet.position.x, y: targetPlanet.position.y };
       }
@@ -104,11 +118,11 @@ export function useCanvasInteraction(
       });
     } else {
       // 空いている場所をクリックした場合
-      if (onCanvasClickCallback) {
-        onCanvasClickCallback(worldPos);
+      if (onCanvasClickCallbackRef.current) {
+        onCanvasClickCallbackRef.current(worldPos);
       }
     }
-  }, [canvasRef, getCanvasRelativePos, screenToWorld, findClickedPlanet, planets, viewParams, onCanvasClickCallback]);
+  }, [canvasRef, getCanvasRelativePos, screenToWorld, findClickedPlanet]);
 
   // マウスムーブイベントハンドラ
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -121,8 +135,8 @@ export function useCanvasInteraction(
     
     // カメラターゲットに応じた中心位置を計算
     let centerPos = { x: 0, y: 0 };
-    if (viewParams.cameraTarget !== 'sun') {
-      const targetPlanet = planets.find(p => p.name === viewParams.cameraTarget);
+    if (viewParamsRef.current.cameraTarget !== 'sun') {
+      const targetPlanet = planetsRef.current.find(p => p.name === viewParamsRef.current.cameraTarget);
       if (targetPlanet) {
         centerPos = { x: targetPlanet.position.x, y: targetPlanet.position.y };
       }
@@ -134,8 +148,8 @@ export function useCanvasInteraction(
       y: worldPos.y - dragState.dragOffset.y,
     };
 
-    onUpdatePlanetPosition(dragState.draggedPlanetId, newPosition);
-  }, [dragState, canvasRef, getCanvasRelativePos, screenToWorld, planets, viewParams, onUpdatePlanetPosition]);
+    onUpdatePlanetPositionRef.current(dragState.draggedPlanetId, newPosition);
+  }, [dragState, canvasRef, getCanvasRelativePos, screenToWorld]);
 
   // マウスアップイベントハンドラ
   const handleMouseUp = useCallback(() => {

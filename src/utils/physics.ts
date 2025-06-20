@@ -11,13 +11,6 @@ export type PhysicsQuantities = {
 };
 
 /**
- * 2つのベクトルの内積を計算
- */
-function dotProduct(v1: Vector2D, v2: Vector2D): number {
-  return v1.x * v2.x + v1.y * v2.y;
-}
-
-/**
  * 2つのベクトルの外積のz成分を計算（2Dなので）
  */
 function crossProductZ(v1: Vector2D, v2: Vector2D): number {

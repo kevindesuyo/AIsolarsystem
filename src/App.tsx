@@ -48,7 +48,10 @@ function App() {
   return (
     <>
       <canvas 
-        ref={canvasRef} 
+        ref={canvasRef}
+        aria-label="太陽系物理シミュレーション - 惑星の動きとその軌道を表示します"
+        role="img"
+        tabIndex={0}
         style={{ 
           display: 'block',
           cursor: dragState.isDragging ? 'grabbing' : 'grab'

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, RefObject } from 'react';
+import { useState, useRef, useEffect, useCallback, RefObject, useMemo } from 'react';
 import { drawSolarSystem } from '../canvas/draw';
 import { updateSimulationState } from '../simulationEngine';
 import { usePlanetTrails } from './usePlanetTrails';
@@ -16,6 +16,29 @@ import {
   DEFAULT_PLANETS_PARAMS
 } from '../constants';
 import { createInitialSun, createPlanetFromEditable } from '../simulationUtils';
+
+// --- Helper functions ---
+
+/**
+ * Generates a unique name by appending a counter if the base name already exists
+ */
+function getUniqueName(baseName: string, existingNames: string[], excludeId?: string): string {
+  const filteredNames = excludeId 
+    ? existingNames.filter(name => name !== excludeId)
+    : existingNames;
+  
+  if (!filteredNames.includes(baseName)) {
+    return baseName;
+  }
+  
+  for (let counter = 1; counter < 1000; counter++) {
+    const candidateName = `${baseName}_${counter}`;
+    if (!filteredNames.includes(candidateName)) {
+      return candidateName;
+    }
+  }
+  return `${baseName}_${Date.now()}`; // Fallback if somehow we can't find a unique name
+}
 
 // --- Hook ---
 // Accept RefObject<HTMLCanvasElement | null> to match useRef<HTMLCanvasElement>(null)
@@ -59,10 +82,22 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     selectPlanetForPrediction,
   } = usePrediction(planets, sun, simulationParams, timeControl);
 
+  // Memoized physics quantities calculation for better performance
+  const memoizedPhysicsQuantities = useMemo(() => {
+    if (!sun || planets.length === 0) return null;
+    return calculatePhysicsQuantities(sun, planets, simulationParams.gravity);
+  }, [sun, planets, simulationParams.gravity]);
+
+  // Update physics quantities when memoized value changes
+  useEffect(() => {
+    if (memoizedPhysicsQuantities) {
+      setPhysicsQuantities(memoizedPhysicsQuantities);
+    }
+  }, [memoizedPhysicsQuantities]);
+
   // Ref for animation loop to access latest state without triggering effect re-runs
   const animationFrameId = useRef<number | null>(null);
   const trailUpdateCounter = useRef<number>(0); // Counter for trail update throttling
-  const physicsUpdateCounter = useRef<number>(0); // Counter for physics calculation throttling
   // Remove prediction state from latestState ref
   const latestState = useRef({ sun, planets, simulationParams, timeControl, viewParams, planetTrails, predictedPath, physicsQuantities });
 
@@ -181,12 +216,7 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
         });
         particleManagerRef.current.update(celestialBodies, currentTimeControl.timeScale);
 
-        // Update physics quantities (throttled for performance)
-        physicsUpdateCounter.current++;
-        if (physicsUpdateCounter.current % 10 === 0) { // Update physics every 10 frames
-          const newPhysics = calculatePhysicsQuantities(currentSun, updatedPlanets, currentSimParams.gravity);
-          setPhysicsQuantities(newPhysics);
-        }
+        // Physics quantities are now calculated via memoization outside the animation loop
       }
 
       // Draw the system
@@ -323,22 +353,8 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
   const onAddPlanet = useCallback((params: EditablePlanetParams) => {
     if (!sun) return;
     // Ensure name is unique
-    const getUniqueName = (baseName: string): string => {
-      const existingNames = planets.map(p => p.name);
-      if (!existingNames.includes(baseName)) {
-        return baseName;
-      }
-      
-      for (let counter = 1; counter < 1000; counter++) {
-        const candidateName = `${baseName}_${counter}`;
-        if (!existingNames.includes(candidateName)) {
-          return candidateName;
-        }
-      }
-      return `${baseName}_${Date.now()}`; // Fallback if somehow we can't find a unique name
-    };
-    
-    const uniqueName = getUniqueName(params.name);
+    const existingNames = planets.map(p => p.name);
+    const uniqueName = getUniqueName(params.name, existingNames);
     const uniqueParams = {...params, name: uniqueName};
 
     const newPlanet = createPlanetFromEditable(uniqueParams, sun, simulationParams.gravity);
@@ -387,26 +403,9 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
           };
 
           // Ensure name uniqueness if changed
-          const getUniqueNameForUpdate = (baseName: string, currentId: string): string => {
-            const existingNames = prevPlanets
-              .filter(p => p.id !== currentId)
-              .map(p => p.name);
-            
-            if (!existingNames.includes(baseName)) {
-              return baseName;
-            }
-            
-            for (let counter = 1; counter < 1000; counter++) {
-              const candidateName = `${baseName}_${counter}`;
-              if (!existingNames.includes(candidateName)) {
-                return candidateName;
-              }
-            }
-            return `${baseName}_${Date.now()}`; // Fallback
-          };
-
+          const existingNames = prevPlanets.map(p => p.name);
           const finalName = updatedParams.name && updatedParams.name !== oldPlanet.name
-            ? getUniqueNameForUpdate(updatedParams.name, targetId)
+            ? getUniqueName(updatedParams.name, existingNames, targetId)
             : mergedParams.name;
 
           // Create the updated Planet object, keeping non-editable fields

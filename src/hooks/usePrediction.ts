@@ -40,7 +40,8 @@ export function usePrediction(
 
     for (let i = 0; i < steps; i++) {
       // Simulate one step ahead using the simulation engine on the temporary state
-      tempPlanets = updateSimulationState(tempSun, tempPlanets, currentSimParams, currentTimeScale);
+      const simulationResult = updateSimulationState(tempSun, tempPlanets, currentSimParams, currentTimeScale);
+      tempPlanets = simulationResult.planets;
 
       // Find the target planet again in case of mergers/removals
       const currentTargetIndex = tempPlanets.findIndex(p => p.id === targetId);

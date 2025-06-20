@@ -78,7 +78,6 @@ export class ParticleManager {
     for (let i = 0; i < particleCount; i++) {
       const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
       const speed = 20 + Math.random() * 40; // Random speed for explosion spread
-      const particleRadius = radius * (0.5 + Math.random() * 1.5); // Vary by collision size
       
       const particle: Particle = {
         id: `explosion_particle_${this.particleIdCounter++}`,

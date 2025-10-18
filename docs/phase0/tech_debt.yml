@@ -1,0 +1,20 @@
+frontend:
+  - id: FE-001
+    summary: "Canvas レンダリングの責務が集中している"
+    remediation: "draw.ts を背景/軌跡/惑星/HUD に分割する"
+    severity: "high"
+physics:
+  - id: PH-001
+    summary: "積分法がオイラー固定で数値誤差が大きい"
+    remediation: "Symplectic Euler または RK4 に刷新する"
+    severity: "medium"
+tooling:
+  - id: TL-001
+    summary: "Lint/整形の自動化が存在しない"
+    remediation: "ESLint + Prettier + lint-staged を導入する"
+    severity: "medium"
+process:
+  - id: PR-001
+    summary: "レビュー体制が未整備"
+    remediation: "CODEOWNERS と GitHub フローガイドを整備"
+    severity: "medium"

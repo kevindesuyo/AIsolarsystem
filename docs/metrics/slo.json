@@ -1,0 +1,18 @@
+{
+  "version": "2025-10-18",
+  "service": "solarsystem-simulator",
+  "indicators": [
+    {
+      "name": "simulation-fps",
+      "description": "平均レンダリング FPS",
+      "slo": ">=60",
+      "period": "weekly"
+    },
+    {
+      "name": "worker-latency",
+      "description": "Worker から UI へのデータ転送遅延",
+      "slo": "<20ms",
+      "period": "daily"
+    }
+  ]
+}

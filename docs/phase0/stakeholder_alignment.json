@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-10-18",
+  "stakeholders": [
+    { "name": "Product Owner (LLM)", "role": "PO", "contact": "po@example.com" },
+    { "name": "Tech Lead (LLM)", "role": "TL", "contact": "techlead@example.com" }
+  ],
+  "decisions": [
+    { "id": "DEC-001", "summary": "Vite への移行を検討し、PoC 後に判断する", "status": "planned" },
+    { "id": "DEC-002", "summary": "物理エンジン刷新をフェーズ 2 で実施する", "status": "approved" }
+  ],
+  "risks": [
+    { "id": "RISK-001", "description": "Worker 化で複雑度が増す", "mitigation": "PoC と段階導入" }
+  ],
+  "signatures": [
+    { "name": "Product Owner (LLM)", "signedAt": "2025-10-18T00:00:00Z" },
+    { "name": "Tech Lead (LLM)", "signedAt": "2025-10-18T00:00:00Z" }
+  ]
+}

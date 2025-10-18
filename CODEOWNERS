@@ -1,0 +1,9 @@
+# Default code owners
+* @solarsystem/maintainers
+
+# Documentation
+docs/** @solarsystem/docs-team
+
+# Simulation engine
+src/physics/** @solarsystem/physics-team
+

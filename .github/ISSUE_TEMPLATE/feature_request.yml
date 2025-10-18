@@ -1,0 +1,29 @@
+name: Feature request
+description: 新機能の提案
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        新機能の目的とゴールを明確に記載してください。
+  - type: input
+    id: summary
+    attributes:
+      label: 概要
+      placeholder: 例) 惑星プリセットを追加する
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: 背景・モチベーション
+      placeholder: ユースケースや課題を記載
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 受け入れ条件
+      placeholder: 定量/定性の判断基準
+

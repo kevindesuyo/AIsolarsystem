@@ -49,6 +49,10 @@ npm run build
 npm test
 ```
 
+## 自動検証
+- TODO 達成状況の静的検査: `npm run verify:todo`
+- チェック内容は `automation/todo-checks.json` を参照してください
+
 ## ライセンス
 - （必要に応じて記載してください）
 

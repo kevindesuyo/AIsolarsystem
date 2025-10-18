@@ -1,0 +1,270 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "phase0.kickoff",
+      "description": "プロジェクトキックオフ資料を準備する",
+      "checks": [
+        { "type": "fileExists", "path": "docs/phase0/kickoff.md" },
+        {
+          "type": "fileIncludes",
+          "path": "docs/phase0/kickoff.md",
+          "includes": [
+            "# プロジェクトキックオフ",
+            "## 方針サマリ",
+            "## リスク",
+            "## 成功指標"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase0.tech_debt",
+      "description": "技術負債棚卸しメモをカテゴリ別に整理する",
+      "checks": [
+        { "type": "fileExists", "path": "docs/phase0/tech_debt.yml" },
+        {
+          "type": "yamlHasCategories",
+          "path": "docs/phase0/tech_debt.yml",
+          "categories": ["frontend", "physics", "tooling", "process"]
+        }
+      ]
+    },
+    {
+      "id": "phase0.dependency_risk",
+      "description": "依存技術アップデートリスク分析を完了する",
+      "checks": [
+        { "type": "fileExists", "path": "docs/phase0/dependency_risk.md" },
+        {
+          "type": "fileIncludes",
+          "path": "docs/phase0/dependency_risk.md",
+          "includes": [
+            "| パッケージ | 現行バージョン | 対象バージョン | リスク | 対応方針 |"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase0.stakeholder_alignment",
+      "description": "ステークホルダー合意文書を整備する",
+      "checks": [
+        { "type": "fileExists", "path": "docs/phase0/stakeholder_alignment.json" },
+        {
+          "type": "jsonHasKeys",
+          "path": "docs/phase0/stakeholder_alignment.json",
+          "keys": ["version", "lastUpdated", "stakeholders", "decisions", "risks", "signatures"]
+        }
+      ]
+    },
+    {
+      "id": "phase1.tsconfig",
+      "description": "`tsconfig.json` の厳格化設定を導入する",
+      "checks": [
+        { "type": "jsonValue", "path": "tsconfig.json", "jsonPath": ["compilerOptions", "noImplicitAny"], "equals": true },
+        { "type": "jsonValue", "path": "tsconfig.json", "jsonPath": ["compilerOptions", "allowJs"], "equals": false }
+      ]
+    },
+    {
+      "id": "phase1.eslint",
+      "description": "ESLint 拡張設定を導入する",
+      "checks": [
+        { "type": "fileExists", "path": ".eslintrc.cjs" },
+        {
+          "type": "fileIncludes",
+          "path": ".eslintrc.cjs",
+          "includes": ["plugin:react-hooks/recommended", "plugin:jsx-a11y/recommended"]
+        }
+      ]
+    },
+    {
+      "id": "phase1.prettier",
+      "description": "Prettier + lint-staged を設定する",
+      "checks": [
+        { "type": "fileExists", "path": ".prettierrc.cjs" },
+        { "type": "jsonHasKeys", "path": "package.json", "keys": ["lint-staged"] },
+        {
+          "type": "jsonValue",
+          "path": "package.json",
+          "jsonPath": ["scripts", "prepare"],
+          "equals": "husky install"
+        }
+      ]
+    },
+    {
+      "id": "phase1.git_hooks",
+      "description": "Git Hook/CI による整形・Lint を強制する",
+      "checks": [
+        { "type": "fileExists", "path": ".husky/pre-commit" },
+        { "type": "fileIncludes", "path": ".husky/pre-commit", "includes": ["lint-staged"] },
+        { "type": "fileExists", "path": ".github/workflows/ci.yml" },
+        {
+          "type": "fileIncludes",
+          "path": ".github/workflows/ci.yml",
+          "includes": ["lint", "type-check", "test"]
+        }
+      ]
+    },
+    {
+      "id": "phase1.docs_readme",
+      "description": "`README.md` の主要セクションを補強する",
+      "checks": [
+        { "type": "fileIncludes", "path": "README.md", "includes": ["## ライセンス", "## 環境変数", "## 主要コマンド"] }
+      ]
+    },
+    {
+      "id": "phase1.env_scaffold",
+      "description": ".env.example と設定ユーティリティを整備する",
+      "checks": [
+        { "type": "fileExists", "path": ".env.example" },
+        { "type": "fileExists", "path": "src/config/env.ts" }
+      ]
+    },
+    {
+      "id": "phase1.dependabot",
+      "description": "Dependabot または Renovate を導入する",
+      "checks": [
+        { "type": "fileExists", "path": ".github/dependabot.yml" }
+      ]
+    },
+    {
+      "id": "phase1.maintenance_report",
+      "description": "`PROJECT_MAINTENANCE_REPORT.md` を最新化する",
+      "checks": [
+        {
+          "type": "fileIncludes",
+          "path": "PROJECT_MAINTENANCE_REPORT.md",
+          "includes": ["## 現行計画", "## リスク", "## 次のアクション"]
+        }
+      ]
+    },
+    {
+      "id": "phase2.worker_poc",
+      "description": "シミュレーション Worker PoC を設計する",
+      "checks": [
+        { "type": "fileExists", "path": "src/simulation/worker/simulationWorker.ts" },
+        { "type": "fileExists", "path": "src/simulation/worker/protocol.ts" }
+      ]
+    },
+    {
+      "id": "phase2.metrics",
+      "description": "フレームスキップ・遅延検知メトリクスを収集する",
+      "checks": [
+        { "type": "fileExists", "path": "src/metrics/frameMetrics.ts" },
+        { "type": "fileExists", "path": "docs/metrics/frame_metrics.md" }
+      ]
+    },
+    {
+      "id": "phase2.physics_engine",
+      "description": "物理エンジンのモジュール化と保存量検証を実装する",
+      "checks": [
+        { "type": "fileExists", "path": "src/physics/gravity.ts" },
+        { "type": "fileExists", "path": "src/physics/collision.ts" },
+        { "type": "fileExists", "path": "src/physics/integration.ts" },
+        { "type": "fileExists", "path": "tests/physics/conservation.test.ts" }
+      ]
+    },
+    {
+      "id": "phase2.rendering",
+      "description": "レンダリング責務分離と WebGL PoC を整備する",
+      "checks": [
+        { "type": "fileExists", "path": "src/canvas/background.ts" },
+        { "type": "fileExists", "path": "src/canvas/trails.ts" },
+        { "type": "fileExists", "path": "src/canvas/bodies.ts" },
+        { "type": "fileExists", "path": "src/canvas/hud.ts" },
+        { "type": "fileExists", "path": "src/canvas/webgl/poc.ts" }
+      ]
+    },
+    {
+      "id": "phase3.design_tokens",
+      "description": "デザインシステムとレイアウトコンポーネントを整備する",
+      "checks": [
+        { "type": "fileExists", "path": "src/design-system/tokens.ts" },
+        { "type": "fileExists", "path": "src/design-system/layout/Grid.tsx" }
+      ]
+    },
+    {
+      "id": "phase3.i18n",
+      "description": "多言語対応フレームワークを導入する",
+      "checks": [
+        { "type": "fileExists", "path": "src/i18n/index.ts" },
+        { "type": "fileExists", "path": "public/locales/ja/common.json" },
+        { "type": "fileExists", "path": "public/locales/en/common.json" }
+      ]
+    },
+    {
+      "id": "phase3.presets",
+      "description": "シナリオプリセットと UI 読み込み機能を実装する",
+      "checks": [
+        { "type": "fileExists", "path": "src/scenarios/index.ts" },
+        { "type": "fileExists", "path": "public/scenarios/resonance.json" }
+      ]
+    },
+    {
+      "id": "phase3.accessibility",
+      "description": "アクセシビリティと操作性改善を検証する",
+      "checks": [
+        { "type": "fileExists", "path": "reports/accessibility/axe.json" },
+        { "type": "fileExists", "path": "src/accessibility/ariaMap.ts" }
+      ]
+    },
+    {
+      "id": "phase4.tests",
+      "description": "テスト体系とカバレッジレポートを整備する",
+      "checks": [
+        { "type": "fileExists", "path": "tests/unit/simulationEngine.test.ts" },
+        { "type": "fileExists", "path": "tests/e2e/playwright.config.ts" },
+        { "type": "fileExists", "path": "coverage/summary.json" }
+      ]
+    },
+    {
+      "id": "phase4.pipeline",
+      "description": "CI/CD と PWA 設定を整備する",
+      "checks": [
+        { "type": "fileExists", "path": ".github/workflows/release.yml" },
+        { "type": "fileExists", "path": "public/manifest.json" },
+        { "type": "fileIncludes", "path": "public/manifest.json", "includes": ["\"start_url\"", "\"display\"", "\"background_color\""] }
+      ]
+    },
+    {
+      "id": "phase4.monitoring",
+      "description": "監視とエラートラッキング設定を整備する",
+      "checks": [
+        { "type": "fileExists", "path": "docs/metrics/slo.json" },
+        { "type": "fileExists", "path": "src/monitoring/sentry.ts" }
+      ]
+    },
+    {
+      "id": "cross.weekly_reports",
+      "description": "週次ステータスレポートのテンプレートを整備する",
+      "checks": [
+        { "type": "directoryPattern", "path": "reports/week", "pattern": "^\\d{4}-W\\d{2}\\.md$" },
+        { "type": "fileIncludes", "path": "reports/week/template.md", "includes": ["## リスク", "## ブロッカー"] }
+      ]
+    },
+    {
+      "id": "cross.retrospective",
+      "description": "レトロスペクティブ記録を整備する",
+      "checks": [
+        { "type": "directoryPattern", "path": "reports/retro", "pattern": "^\\d{4}-W\\d{2}\\.md$" },
+        { "type": "fileIncludes", "path": "reports/retro/template.md", "includes": ["## Keep", "## Problem", "## Try"] }
+      ]
+    },
+    {
+      "id": "cross.backlog",
+      "description": "バックログ管理体制を整備する",
+      "checks": [
+        { "type": "fileExists", "path": ".github/ISSUE_TEMPLATE/feature_request.yml" },
+        { "type": "fileExists", "path": ".github/ISSUE_TEMPLATE/bug_report.yml" },
+        { "type": "fileExists", "path": "CODEOWNERS" }
+      ]
+    },
+    {
+      "id": "cross.performance_budget",
+      "description": "パフォーマンス予算と SLO を策定する",
+      "checks": [
+        { "type": "fileExists", "path": "docs/metrics/performance_budget.md" },
+        { "type": "fileExists", "path": "docs/metrics/slo.json" }
+      ]
+    }
+  ]
+}

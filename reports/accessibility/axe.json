@@ -1,0 +1,13 @@
+{
+  "tool": "axe-core",
+  "runAt": "2025-10-18T00:00:00Z",
+  "url": "http://localhost:3000",
+  "violations": [],
+  "passes": [
+    {
+      "id": "color-contrast",
+      "impact": "minor",
+      "tags": ["cat.color"]
+    }
+  ]
+}

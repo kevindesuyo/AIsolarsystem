@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, RefObject, useMemo } from 'react';
 import { drawSolarSystem } from '../canvas/draw';
-import { updateSimulationState } from '../simulationEngine';
+import { updateSimulationState, CollisionInfo } from '../simulationEngine';
 import { usePlanetTrails } from './usePlanetTrails';
 import { usePrediction } from './usePrediction'; // Import the new hook
 import { ParticleManager } from '../canvas/particles';
@@ -65,6 +65,9 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
 
   // Physics quantities state
   const [physicsQuantities, setPhysicsQuantities] = useState<PhysicsQuantities | null>(null);
+  // Collision tracking for gameplay/UX feedback
+  const [lastCollisionTime, setLastCollisionTime] = useState<number | null>(null);
+  const [collisionEvents, setCollisionEvents] = useState<Array<{ timestamp: number; collisions: CollisionInfo[] }>>([]);
 
   // Use the custom hook for trails (renameTrail is removed)
   const {
@@ -149,6 +152,21 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvasRef]); // Only run once on mount
 
+  // Keep canvas size in sync with viewport (prevents letterboxing on resize)
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [canvasRef]);
+
   // --- Animation Loop ---
   useEffect(() => {
     if (!canvasRef.current || !sun) return; // Ensure canvas and sun are initialized
@@ -193,6 +211,12 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
               collision.color1,
               collision.color2
             );
+          });
+          const timestamp = Date.now();
+          setLastCollisionTime(timestamp);
+          setCollisionEvents(prev => {
+            const next = [...prev, { timestamp, collisions: simulationResult.collisions }];
+            return next.slice(-8); // Keep recent events only
           });
         }
 
@@ -495,5 +519,7 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     onUpdatePlanetParams,
     onUpdatePlanetPosition, // Expose drag and drop function
     selectPlanetForPrediction, // Expose function from usePrediction
+    collisionEvents,
+    lastCollisionTime,
   };
 }

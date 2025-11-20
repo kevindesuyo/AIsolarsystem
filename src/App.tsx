@@ -4,6 +4,11 @@ import ControlPanel from './components/ControlPanel';
 import PhysicsPanel from './components/PhysicsPanel';
 import { useSimulation } from './hooks/useSimulation'; // Changed to named import
 import { useCanvasInteraction } from './hooks/useCanvasInteraction';
+import GameHud from './components/GameHud';
+import MissionBoard from './components/MissionBoard';
+import EventFeed from './components/EventFeed';
+import { useGameState } from './hooks/useGameState';
+import { EditablePlanetParams } from './types';
 
 function App() {
   // Correctly type the canvas ref
@@ -35,6 +40,8 @@ function App() {
     onUpdatePlanetParams, // Use the new update function
     onUpdatePlanetPosition, // Get the drag and drop function
     selectPlanetForPrediction, // Get the prediction selection function
+    collisionEvents,
+    lastCollisionTime,
   } = useSimulation(canvasRef);
 
   // Set up canvas interaction for drag and drop
@@ -45,9 +52,50 @@ function App() {
     onUpdatePlanetPosition
   );
 
+  // Game layer (missions, score, events)
+  const {
+    score,
+    stabilitySeconds,
+    cometUptimeSeconds,
+    missions,
+    events,
+    registerPlanetAdded,
+    registerPlanetRemoved,
+    registerReset,
+  } = useGameState({
+    planets,
+    timeControl,
+    collisionEvents,
+    lastCollisionTime,
+    physicsQuantities,
+  });
+
+  // Wrap control handlers to also update game state
+  const handleAddPlanet = (params: EditablePlanetParams) => {
+    onAddPlanet(params);
+    registerPlanetAdded(params.name);
+  };
+
+  const handleRemovePlanet = (planetId: string) => {
+    const targetName = planets.find(p => p.id === planetId)?.name ?? '未知の惑星';
+    onRemovePlanet(planetId);
+    registerPlanetRemoved(targetName);
+  };
+
+  const handleReset = () => {
+    reset();
+    registerReset(false);
+  };
+
+  const handleFullReset = () => {
+    fullReset();
+    registerReset(true);
+  };
+
   return (
-    <>
-      <canvas 
+    <div className="app-shell">
+      <canvas
+        className="simulation-canvas"
         ref={canvasRef}
         aria-label="太陽系物理シミュレーション - 惑星の動きとその軌道を表示します"
         role="img"
@@ -67,16 +115,26 @@ function App() {
         onSpeedUp={speedUp}
         onPause={pause}
         onResume={resume}
-        onReset={reset}
-        onFullReset={fullReset}
+        onReset={handleReset}
+        onFullReset={handleFullReset}
         onGravityChange={onGravityChange}
         onSunMassChange={onSunMassChange}
         onZoomChange={onZoomChange}
         onCameraTargetChange={onCameraTargetChange}
-        onAddPlanet={onAddPlanet}
-        onRemovePlanet={onRemovePlanet}
+        onAddPlanet={handleAddPlanet}
+        onRemovePlanet={handleRemovePlanet}
         onUpdatePlanetParams={onUpdatePlanetParams}
         selectPlanetForPrediction={selectPlanetForPrediction} // Pass the function down
+      />
+
+      <MissionBoard missions={missions} />
+      <EventFeed events={events} />
+      <GameHud
+        score={score}
+        stabilitySeconds={stabilitySeconds}
+        cometSeconds={cometUptimeSeconds}
+        timeScale={timeControl.timeScale}
+        planetCount={planets.length}
       />
       
       {/* Physics Panel */}
@@ -87,7 +145,7 @@ function App() {
           onToggleVisibility={() => setShowPhysicsPanel(!showPhysicsPanel)}
         />
       )}
-    </>
+    </div>
   );
 }
 

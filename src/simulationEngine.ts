@@ -6,6 +6,11 @@ export type CollisionInfo = {
   radius: number;
   color1: string;
   color2: string;
+  bodies: Array<{
+    id: string;
+    name: string;
+    mass: number;
+  }>;
 };
 
 /**
@@ -86,6 +91,10 @@ function handleCollisions(planets: Planet[]): { planets: Planet[]; collisions: C
                     radius: Math.max(currentPlanet.radius, otherPlanet.radius),
                     color1: currentPlanet.color,
                     color2: otherPlanet.color,
+                    bodies: [
+                      { id: currentPlanet.id, name: currentPlanet.name, mass: currentPlanet.mass },
+                      { id: otherPlanet.id, name: otherPlanet.name, mass: otherPlanet.mass },
+                    ],
                 });
 
                 // Determine larger planet (by mass)

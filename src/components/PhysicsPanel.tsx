@@ -12,13 +12,14 @@ function PhysicsPanel({ physics, isVisible, onToggleVisibility }: PhysicsPanelPr
     return (
       <div style={{
         position: 'fixed',
-        top: 10,
-        right: 10,
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        bottom: 16,
+        left: 16,
+        backgroundColor: 'rgba(12,16,28,0.8)',
         color: 'white',
-        padding: '5px 10px',
-        borderRadius: '5px',
+        padding: '8px 12px',
+        borderRadius: '10px',
         fontSize: '12px',
+        border: '1px solid rgba(255,255,255,0.08)',
         cursor: 'pointer'
       }} onClick={onToggleVisibility}>
         📊 物理量を表示
@@ -29,17 +30,20 @@ function PhysicsPanel({ physics, isVisible, onToggleVisibility }: PhysicsPanelPr
   return (
     <div style={{
       position: 'fixed',
-      top: 10,
-      right: 10,
-      backgroundColor: 'rgba(0,0,0,0.85)',
+      bottom: 16,
+      left: 16,
+      backgroundColor: 'rgba(12,16,28,0.9)',
       color: 'white',
-      padding: '15px',
-      borderRadius: '8px',
+      padding: '16px',
+      borderRadius: '12px',
       fontSize: '13px',
       fontFamily: 'monospace',
       minWidth: '280px',
       maxWidth: '320px',
-      border: '1px solid rgba(255,255,255,0.2)'
+      border: '1px solid rgba(255,255,255,0.08)',
+      boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+      backdropFilter: 'blur(10px)',
+      zIndex: 3,
     }}>
       <div style={{ 
         display: 'flex', 

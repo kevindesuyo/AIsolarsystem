@@ -45,7 +45,7 @@ function ControlPanel({
   };
 
   return (
-    <div style={{ position: 'fixed', top: 10, left: 10, color: 'white', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'rgba(0,0,0,0.7)', padding: '10px', borderRadius: '5px', fontSize: '14px' }}>
+    <div className="control-panel glass-panel">
       {/* Time Controls */}
       <TimeControlPanel
         timeControl={timeControl}

@@ -4,6 +4,18 @@ import { CollisionInfo } from '../simulationEngine';
 import { PhysicsQuantities } from '../utils/physics';
 import { generateUUID } from '../utils/uuid';
 
+// Mission threshold constants
+const ZOOM_IN_THRESHOLD = 2.0;
+const ZOOM_OUT_THRESHOLD = 0.3;
+const EXPLORER_MISSION_TIME_SECONDS = 120;
+const STABILITY_MISSION_TIME_SECONDS = 45;
+const COMET_MISSION_TIME_SECONDS = 25;
+const TIME_WARP_MISSION_THRESHOLD = 3.0;
+const OVERCROWDED_ORBIT_THRESHOLD = 12;
+const COLLISION_MISSION_COUNT = 3;
+const ORBITAL_DESIGNER_PLANETS = 2;
+const GALAXY_ARCHITECT_PLANETS = 5;
+
 export type GameEvent = {
   id: string;
   type: 'info' | 'collision' | 'mission';
@@ -134,8 +146,8 @@ export function useGameState({
 
   // --- Track zoom usage ---
   useEffect(() => {
-    if (zoom >= 2.0) setZoomedIn(true);
-    if (zoom <= 0.3) setZoomedOut(true);
+    if (zoom >= ZOOM_IN_THRESHOLD) setZoomedIn(true);
+    if (zoom <= ZOOM_OUT_THRESHOLD) setZoomedOut(true);
   }, [zoom]);
 
   // --- Timers for streaks ---
@@ -170,26 +182,26 @@ export function useGameState({
 
   // --- Missions completion checks ---
   useEffect(() => {
-    if (stabilitySeconds >= 45 && planets.length >= 4) {
-      completeMission('stability', 120, '45秒間システムを安定維持');
+    if (stabilitySeconds >= STABILITY_MISSION_TIME_SECONDS && planets.length >= 4) {
+      completeMission('stability', 120, `${STABILITY_MISSION_TIME_SECONDS}秒間システムを安定維持`);
     }
   }, [stabilitySeconds, planets.length, completeMission]);
 
   useEffect(() => {
-    if (customPlanetsPlaced >= 2) {
-      completeMission('builder', 70, '新たな惑星を2つ投入');
+    if (customPlanetsPlaced >= ORBITAL_DESIGNER_PLANETS) {
+      completeMission('builder', 70, `新たな惑星を${ORBITAL_DESIGNER_PLANETS}つ投入`);
     }
   }, [customPlanetsPlaced, completeMission]);
 
   useEffect(() => {
-    if (cometUptimeSeconds >= 25) {
-      completeMission('comet', 80, '彗星を25秒存続させた');
+    if (cometUptimeSeconds >= COMET_MISSION_TIME_SECONDS) {
+      completeMission('comet', 80, `彗星を${COMET_MISSION_TIME_SECONDS}秒存続させた`);
     }
   }, [cometUptimeSeconds, completeMission]);
 
   useEffect(() => {
-    if (timeControl.timeScale >= 3) {
-      completeMission('timewarp', 50, '時間倍率を3.0x以上に到達');
+    if (timeControl.timeScale >= TIME_WARP_MISSION_THRESHOLD) {
+      completeMission('timewarp', 50, `時間倍率を${TIME_WARP_MISSION_THRESHOLD}x以上に到達`);
     }
   }, [timeControl.timeScale, completeMission]);
 
@@ -201,20 +213,20 @@ export function useGameState({
 
   // --- New mission completion checks ---
   useEffect(() => {
-    if (collisionCount >= 3) {
-      completeMission('destroyer', 90, '3回の衝突を引き起こした');
+    if (collisionCount >= COLLISION_MISSION_COUNT) {
+      completeMission('destroyer', 90, `${COLLISION_MISSION_COUNT}回の衝突を引き起こした`);
     }
   }, [collisionCount, completeMission]);
 
   useEffect(() => {
-    if (maxPlanetCount >= 12) {
-      completeMission('crowded', 100, '12個以上の天体を同時に存在させた');
+    if (maxPlanetCount >= OVERCROWDED_ORBIT_THRESHOLD) {
+      completeMission('crowded', 100, `${OVERCROWDED_ORBIT_THRESHOLD}個以上の天体を同時に存在させた`);
     }
   }, [maxPlanetCount, completeMission]);
 
   useEffect(() => {
-    if (playTimeSeconds >= 120) {
-      completeMission('explorer', 60, '2分間シミュレーションを観察');
+    if (playTimeSeconds >= EXPLORER_MISSION_TIME_SECONDS) {
+      completeMission('explorer', 60, `${EXPLORER_MISSION_TIME_SECONDS / 60}分間シミュレーションを観察`);
     }
   }, [playTimeSeconds, completeMission]);
 
@@ -225,8 +237,8 @@ export function useGameState({
   }, [zoomedIn, zoomedOut, completeMission]);
 
   useEffect(() => {
-    if (customPlanetsPlaced >= 5) {
-      completeMission('architect', 150, '5つの惑星を追加して銀河を設計');
+    if (customPlanetsPlaced >= GALAXY_ARCHITECT_PLANETS) {
+      completeMission('architect', 150, `${GALAXY_ARCHITECT_PLANETS}つの惑星を追加して銀河を設計`);
     }
   }, [customPlanetsPlaced, completeMission]);
 
@@ -236,36 +248,36 @@ export function useGameState({
       {
         id: 'stability',
         title: '静穏ガーディアン',
-        description: '4個以上の天体を衝突させず45秒キープ。',
-        progress: Math.min(1, stabilitySeconds / 45),
-        goalText: `${stabilitySeconds}s / 45s`,
+        description: `4個以上の天体を衝突させず${STABILITY_MISSION_TIME_SECONDS}秒キープ。`,
+        progress: Math.min(1, stabilitySeconds / STABILITY_MISSION_TIME_SECONDS),
+        goalText: `${stabilitySeconds}s / ${STABILITY_MISSION_TIME_SECONDS}s`,
         reward: 120,
         status: completedMissions.stability ? 'completed' : 'active',
       },
       {
         id: 'builder',
         title: '軌道設計士',
-        description: 'シミュレーション中に新しい惑星を2つ追加する。',
-        progress: Math.min(1, customPlanetsPlaced / 2),
-        goalText: `${customPlanetsPlaced}/2 追加`,
+        description: `シミュレーション中に新しい惑星を${ORBITAL_DESIGNER_PLANETS}つ追加する。`,
+        progress: Math.min(1, customPlanetsPlaced / ORBITAL_DESIGNER_PLANETS),
+        goalText: `${customPlanetsPlaced}/${ORBITAL_DESIGNER_PLANETS} 追加`,
         reward: 70,
         status: completedMissions.builder ? 'completed' : 'active',
       },
       {
         id: 'comet',
         title: '彗星ハンドラー',
-        description: '彗星を25秒以上生存させ、尾を保ち続ける。',
-        progress: Math.min(1, cometUptimeSeconds / 25),
-        goalText: `${cometUptimeSeconds}s / 25s`,
+        description: `彗星を${COMET_MISSION_TIME_SECONDS}秒以上生存させ、尾を保ち続ける。`,
+        progress: Math.min(1, cometUptimeSeconds / COMET_MISSION_TIME_SECONDS),
+        goalText: `${cometUptimeSeconds}s / ${COMET_MISSION_TIME_SECONDS}s`,
         reward: 80,
         status: completedMissions.comet ? 'completed' : 'active',
       },
       {
         id: 'timewarp',
         title: '時間操作の達人',
-        description: '時間倍率を3.0x以上まで引き上げる。',
-        progress: Math.min(1, timeControl.timeScale / 3),
-        goalText: `${timeControl.timeScale.toFixed(2)}x / 3.00x`,
+        description: `時間倍率を${TIME_WARP_MISSION_THRESHOLD}x以上まで引き上げる。`,
+        progress: Math.min(1, timeControl.timeScale / TIME_WARP_MISSION_THRESHOLD),
+        goalText: `${timeControl.timeScale.toFixed(2)}x / ${TIME_WARP_MISSION_THRESHOLD.toFixed(2)}x`,
         reward: 50,
         status: completedMissions.timewarp ? 'completed' : 'active',
       },
@@ -281,34 +293,34 @@ export function useGameState({
       {
         id: 'destroyer',
         title: '宇宙の破壊者',
-        description: '3回の衝突イベントを発生させる。',
-        progress: Math.min(1, collisionCount / 3),
-        goalText: `${collisionCount}/3 衝突`,
+        description: `${COLLISION_MISSION_COUNT}回の衝突イベントを発生させる。`,
+        progress: Math.min(1, collisionCount / COLLISION_MISSION_COUNT),
+        goalText: `${collisionCount}/${COLLISION_MISSION_COUNT} 衝突`,
         reward: 90,
         status: completedMissions.destroyer ? 'completed' : 'active',
       },
       {
         id: 'crowded',
         title: '過密軌道マスター',
-        description: '12個以上の天体を同時に軌道上に配置。',
-        progress: Math.min(1, maxPlanetCount / 12),
-        goalText: `${maxPlanetCount}/12 天体`,
+        description: `${OVERCROWDED_ORBIT_THRESHOLD}個以上の天体を同時に軌道上に配置。`,
+        progress: Math.min(1, maxPlanetCount / OVERCROWDED_ORBIT_THRESHOLD),
+        goalText: `${maxPlanetCount}/${OVERCROWDED_ORBIT_THRESHOLD} 天体`,
         reward: 100,
         status: completedMissions.crowded ? 'completed' : 'active',
       },
       {
         id: 'explorer',
         title: '宇宙探検家',
-        description: '2分間シミュレーションを観察し続ける。',
-        progress: Math.min(1, playTimeSeconds / 120),
-        goalText: `${playTimeSeconds}s / 120s`,
+        description: `${EXPLORER_MISSION_TIME_SECONDS / 60}分間シミュレーションを観察し続ける。`,
+        progress: Math.min(1, playTimeSeconds / EXPLORER_MISSION_TIME_SECONDS),
+        goalText: `${playTimeSeconds}s / ${EXPLORER_MISSION_TIME_SECONDS}s`,
         reward: 60,
         status: completedMissions.explorer ? 'completed' : 'active',
       },
       {
         id: 'observer',
         title: '観測者',
-        description: 'ズームイン(2x+)とズームアウト(0.3x以下)を両方使用。',
+        description: `ズームイン(${ZOOM_IN_THRESHOLD}x+)とズームアウト(${ZOOM_OUT_THRESHOLD}x以下)を両方使用。`,
         progress: (zoomedIn ? 0.5 : 0) + (zoomedOut ? 0.5 : 0),
         goalText: `${zoomedIn ? '✓' : '×'}拡大 ${zoomedOut ? '✓' : '×'}縮小`,
         reward: 40,
@@ -317,9 +329,9 @@ export function useGameState({
       {
         id: 'architect',
         title: '銀河アーキテクト',
-        description: '5つの新しい惑星を追加して独自の銀河を設計。',
-        progress: Math.min(1, customPlanetsPlaced / 5),
-        goalText: `${customPlanetsPlaced}/5 追加`,
+        description: `${GALAXY_ARCHITECT_PLANETS}つの新しい惑星を追加して独自の銀河を設計。`,
+        progress: Math.min(1, customPlanetsPlaced / GALAXY_ARCHITECT_PLANETS),
+        goalText: `${customPlanetsPlaced}/${GALAXY_ARCHITECT_PLANETS} 追加`,
         reward: 150,
         status: completedMissions.architect ? 'completed' : 'active',
       },

@@ -2,50 +2,212 @@ import { Planet, Sun, ViewParameters, TrailMap, CelestialBody, Vector2D } from '
 import { loadImage, getCachedImage } from './textureLoader'; // Import from new module
 import { ParticleManager } from './particles';
 
-const STAR_COUNT = 100; // Number of background stars
+const STAR_COUNT = 400; // Number of background stars (increased for better visuals)
+const NEBULA_COUNT = 5; // Number of distant nebulae
 
-// Offscreen canvas for pre-rendered stars
-let starCanvas: HTMLCanvasElement | null = null;
-let starCtx: CanvasRenderingContext2D | null = null;
+// Star data for twinkling effect
+type Star = {
+  x: number;
+  y: number;
+  radius: number;
+  brightness: number;
+  twinkleSpeed: number;
+  twinklePhase: number;
+  color: string;
+};
+
+let stars: Star[] = [];
+let lastStarWidth = 0;
+let lastStarHeight = 0;
+
+// Nebula data for background ambiance
+type Nebula = {
+  x: number;
+  y: number;
+  radiusX: number;
+  radiusY: number;
+  color: string;
+  rotation: number;
+};
+
+let nebulae: Nebula[] = [];
 
 /**
- * Pre-renders stars onto an offscreen canvas if not already done.
+ * Generates star and nebula data for the background
  */
-function ensureStarsDrawn(width: number, height: number) {
-  // Create canvas only once or if size changes significantly (optional enhancement)
-  if (!starCanvas || starCanvas.width !== width || starCanvas.height !== height) {
-    starCanvas = document.createElement('canvas');
-    starCanvas.width = width;
-    starCanvas.height = height;
-    starCtx = starCanvas.getContext('2d');
-
-    if (!starCtx) {
-      console.error("Failed to get 2D context for star canvas");
-      starCanvas = null; // Reset if context fails
-      return;
-    }
-
-    // Draw stars onto the offscreen canvas
-    starCtx.fillStyle = 'rgba(200, 200, 200, 0.5)';
-    for (let i = 0; i < STAR_COUNT; i++) {
-      const x = Math.random() * width;
-      const y = Math.random() * height;
-      const radius = Math.random() * 1.2;
-      starCtx.beginPath();
-      starCtx.arc(x, y, radius, 0, Math.PI * 2);
-      starCtx.fill();
-    }
+function generateStarField(width: number, height: number) {
+  if (lastStarWidth === width && lastStarHeight === height && stars.length > 0) {
+    return; // Already generated for this size
+  }
+  
+  lastStarWidth = width;
+  lastStarHeight = height;
+  stars = [];
+  nebulae = [];
+  
+  // Star color palette (realistic star colors)
+  const starColors = [
+    'rgba(255, 255, 255, 1)',    // White
+    'rgba(255, 244, 234, 1)',    // Warm white
+    'rgba(255, 210, 161, 1)',    // Orange-ish
+    'rgba(200, 220, 255, 1)',    // Blue-ish
+    'rgba(255, 200, 200, 1)',    // Red-ish
+    'rgba(180, 180, 255, 1)',    // Purple-ish
+  ];
+  
+  // Generate stars
+  for (let i = 0; i < STAR_COUNT; i++) {
+    const colorIndex = Math.random() < 0.7 ? 0 : Math.floor(Math.random() * starColors.length);
+    stars.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      radius: 0.3 + Math.random() * 1.5,
+      brightness: 0.3 + Math.random() * 0.7,
+      twinkleSpeed: 0.5 + Math.random() * 2,
+      twinklePhase: Math.random() * Math.PI * 2,
+      color: starColors[colorIndex],
+    });
+  }
+  
+  // Generate nebulae
+  const nebulaColors = [
+    'rgba(100, 50, 150, 0.03)',   // Purple
+    'rgba(50, 100, 150, 0.03)',   // Blue
+    'rgba(150, 50, 100, 0.02)',   // Pink
+    'rgba(50, 150, 100, 0.02)',   // Green/teal
+    'rgba(150, 100, 50, 0.02)',   // Orange
+  ];
+  
+  for (let i = 0; i < NEBULA_COUNT; i++) {
+    nebulae.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      radiusX: 100 + Math.random() * 300,
+      radiusY: 100 + Math.random() * 300,
+      color: nebulaColors[i % nebulaColors.length],
+      rotation: Math.random() * Math.PI,
+    });
   }
 }
 
+// Animation frame counter for twinkling
+let starAnimationFrame = 0;
+
 /**
- * Draws the pre-rendered stars from the offscreen canvas.
+ * Draws animated background with stars and nebulae
  */
 function drawStars(ctx: CanvasRenderingContext2D, width: number, height: number) {
-  ensureStarsDrawn(width, height); // Ensure stars are drawn on the offscreen canvas
-  if (starCanvas) {
-    ctx.drawImage(starCanvas, 0, 0); // Draw the pre-rendered canvas
+  generateStarField(width, height);
+  
+  starAnimationFrame++;
+  const time = starAnimationFrame * 0.016; // Approximate time in seconds (60fps)
+  
+  ctx.save();
+  
+  // Draw nebulae first (behind stars)
+  for (const nebula of nebulae) {
+    ctx.save();
+    ctx.translate(nebula.x, nebula.y);
+    ctx.rotate(nebula.rotation);
+    
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(nebula.radiusX, nebula.radiusY));
+    gradient.addColorStop(0, nebula.color);
+    gradient.addColorStop(0.5, nebula.color.replace(/[\d.]+\)$/, '0.02)'));
+    gradient.addColorStop(1, 'transparent');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, nebula.radiusX, nebula.radiusY, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
+  
+  // Draw stars with twinkling effect
+  for (const star of stars) {
+    // Calculate twinkling brightness
+    const twinkle = Math.sin(time * star.twinkleSpeed + star.twinklePhase);
+    const currentBrightness = star.brightness * (0.7 + 0.3 * twinkle);
+    
+    ctx.globalAlpha = currentBrightness;
+    
+    // Draw star glow for brighter stars
+    if (star.radius > 1) {
+      const glowRadius = star.radius * 3;
+      const gradient = ctx.createRadialGradient(
+        star.x, star.y, 0,
+        star.x, star.y, glowRadius
+      );
+      gradient.addColorStop(0, star.color);
+      gradient.addColorStop(0.3, star.color.replace('1)', '0.3)'));
+      gradient.addColorStop(1, 'transparent');
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, glowRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Draw star core
+    ctx.fillStyle = star.color;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  ctx.restore();
+}
+
+/**
+ * Draws Saturn's rings
+ */
+function drawRings(
+  ctx: CanvasRenderingContext2D,
+  screenX: number,
+  screenY: number,
+  screenRadius: number,
+  rotation: number
+) {
+  ctx.save();
+  ctx.translate(screenX, screenY);
+  ctx.rotate(rotation);
+  
+  // Draw multiple ring layers for realistic effect
+  const ringLayers = [
+    { inner: 1.3, outer: 1.5, color: 'rgba(210, 180, 140, 0.4)' },
+    { inner: 1.55, outer: 1.8, color: 'rgba(255, 228, 196, 0.5)' },
+    { inner: 1.85, outer: 2.1, color: 'rgba(218, 165, 32, 0.4)' },
+    { inner: 2.15, outer: 2.3, color: 'rgba(205, 133, 63, 0.3)' },
+  ];
+  
+  for (const layer of ringLayers) {
+    const inner = screenRadius * layer.inner;
+    const outer = screenRadius * layer.outer;
+    
+    // Create ring gradient
+    const gradient = ctx.createRadialGradient(0, 0, inner, 0, 0, outer);
+    gradient.addColorStop(0, 'transparent');
+    gradient.addColorStop(0.2, layer.color);
+    gradient.addColorStop(0.8, layer.color);
+    gradient.addColorStop(1, 'transparent');
+    
+    ctx.fillStyle = gradient;
+    
+    // Draw elliptical ring (tilted view)
+    ctx.beginPath();
+    ctx.ellipse(0, 0, outer, outer * 0.3, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, inner, inner * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill('evenodd');
+  }
+  
+  ctx.restore();
+}
+
+/**
+ * Checks if a planet should have rings (Saturn-like)
+ */
+function shouldHaveRings(name: string): boolean {
+  const lowerName = name.toLowerCase();
+  return lowerName === 'saturn' || lowerName.includes('ring');
 }
 
 /**
@@ -103,7 +265,12 @@ function drawBody(
     ctx.fill();
   }
 
-  ctx.restore(); // Restore context before drawing labels
+  ctx.restore(); // Restore context before drawing rings and labels
+
+  // --- Draw rings for Saturn-like planets ---
+  if (shouldHaveRings(body.name)) {
+    drawRings(ctx, screenX, screenY, screenRadius, body.currentRotation * 0.1);
+  }
 
   // --- Draw labels (name and speed) for non-star bodies ---
   // Check if body is a Planet to access velocity (Sun type doesn't have it implicitly)

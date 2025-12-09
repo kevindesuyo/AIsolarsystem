@@ -16,6 +16,7 @@ import {
   DEFAULT_PLANETS_PARAMS
 } from '../constants';
 import { createInitialSun, createPlanetFromEditable } from '../simulationUtils';
+import { ScenarioPreset } from '../data/scenarios';
 
 // --- Helper functions ---
 
@@ -489,6 +490,45 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     });
   }, []);
 
+  // Load a scenario preset
+  const loadScenario = useCallback((scenario: ScenarioPreset) => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const width = canvas.width = window.innerWidth;
+    const height = canvas.height = window.innerHeight;
+
+    // Set simulation parameters from scenario
+    const newSimParams = { gravity: scenario.gravity, sunMass: scenario.sunMass };
+    const newTimeControl = { timeScale: DEFAULT_TIME_SCALE, isRunning: true };
+    const newViewParams = { zoom: DEFAULT_ZOOM, cameraTarget: DEFAULT_CAMERA_TARGET };
+
+    const newSun = createInitialSun(width, height, newSimParams.sunMass);
+    const newPlanets = scenario.planets.map(params =>
+      createPlanetFromEditable(params, newSun, newSimParams.gravity)
+    );
+
+    setSimulationParams(newSimParams);
+    setTimeControl(newTimeControl);
+    setViewParams(newViewParams);
+    setSun(newSun);
+    setPlanets(newPlanets);
+    resetAllTrails(newPlanets);
+
+    // Reset particle effects
+    const particleManager = particleManagerRef.current;
+    particleManager.clear();
+    particleManager.toggleEffect(newSun.id, 'star', true);
+    newPlanets.forEach(planet => {
+      if (planet.type === 'comet') {
+        particleManager.toggleEffect(planet.id, 'comet', true);
+      }
+    });
+
+    // Recalculate physics quantities
+    const newPhysics = calculatePhysicsQuantities(newSun, newPlanets, newSimParams.gravity);
+    setPhysicsQuantities(newPhysics);
+  }, [canvasRef, resetAllTrails]);
+
   // --- Return Values ---
   return {
     // Simulation State (Read-only for components)
@@ -519,6 +559,7 @@ export function useSimulation(canvasRef: RefObject<HTMLCanvasElement | null>) {
     onUpdatePlanetParams,
     onUpdatePlanetPosition, // Expose drag and drop function
     selectPlanetForPrediction, // Expose function from usePrediction
+    loadScenario, // Expose scenario loading function
     collisionEvents,
     lastCollisionTime,
   };

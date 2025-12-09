@@ -27,6 +27,7 @@ type UseGameStateArgs = {
   collisionEvents: Array<{ timestamp: number; collisions: CollisionInfo[] }>;
   lastCollisionTime: number | null;
   physicsQuantities: PhysicsQuantities | null;
+  zoom?: number;
 };
 
 /**
@@ -39,6 +40,7 @@ export function useGameState({
   collisionEvents,
   lastCollisionTime,
   physicsQuantities,
+  zoom = 1,
 }: UseGameStateArgs) {
   const [score, setScore] = useState(0);
   const [customPlanetsPlaced, setCustomPlanetsPlaced] = useState(0);
@@ -46,6 +48,11 @@ export function useGameState({
   const [cometUptimeSeconds, setCometUptimeSeconds] = useState(0);
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [completedMissions, setCompletedMissions] = useState<Record<string, boolean>>({});
+  const [maxPlanetCount, setMaxPlanetCount] = useState(0);
+  const [collisionCount, setCollisionCount] = useState(0);
+  const [playTimeSeconds, setPlayTimeSeconds] = useState(0);
+  const [zoomedIn, setZoomedIn] = useState(false);
+  const [zoomedOut, setZoomedOut] = useState(false);
 
   const lastCollisionTimestampRef = useRef<number | null>(null);
 
@@ -117,7 +124,19 @@ export function useGameState({
 
     setScore(s => Math.max(0, s - 10)); // Small penalty for crashes
     setStabilitySeconds(0);
+    setCollisionCount(prev => prev + latest.collisions.length); // Track collision count
   }, [collisionEvents, pushEvent]);
+
+  // --- Track max planet count ---
+  useEffect(() => {
+    setMaxPlanetCount(prev => Math.max(prev, planets.length));
+  }, [planets.length]);
+
+  // --- Track zoom usage ---
+  useEffect(() => {
+    if (zoom >= 2.0) setZoomedIn(true);
+    if (zoom <= 0.3) setZoomedOut(true);
+  }, [zoom]);
 
   // --- Timers for streaks ---
   useEffect(() => {
@@ -129,6 +148,8 @@ export function useGameState({
 
       const hasComet = planets.some(p => p.type === 'comet');
       setCometUptimeSeconds(prev => (hasComet ? prev + 1 : 0));
+      
+      setPlayTimeSeconds(prev => prev + 1); // Track total play time
     }, 1000);
 
     return () => window.clearInterval(intervalId);
@@ -178,6 +199,37 @@ export function useGameState({
     }
   }, [physicsQuantities, completeMission]);
 
+  // --- New mission completion checks ---
+  useEffect(() => {
+    if (collisionCount >= 3) {
+      completeMission('destroyer', 90, '3回の衝突を引き起こした');
+    }
+  }, [collisionCount, completeMission]);
+
+  useEffect(() => {
+    if (maxPlanetCount >= 12) {
+      completeMission('crowded', 100, '12個以上の天体を同時に存在させた');
+    }
+  }, [maxPlanetCount, completeMission]);
+
+  useEffect(() => {
+    if (playTimeSeconds >= 120) {
+      completeMission('explorer', 60, '2分間シミュレーションを観察');
+    }
+  }, [playTimeSeconds, completeMission]);
+
+  useEffect(() => {
+    if (zoomedIn && zoomedOut) {
+      completeMission('observer', 40, 'ズームインとズームアウトを両方使用');
+    }
+  }, [zoomedIn, zoomedOut, completeMission]);
+
+  useEffect(() => {
+    if (customPlanetsPlaced >= 5) {
+      completeMission('architect', 150, '5つの惑星を追加して銀河を設計');
+    }
+  }, [customPlanetsPlaced, completeMission]);
+
   // --- Mission definitions for UI ---
   const missions: GameMission[] = useMemo(() => {
     return [
@@ -226,6 +278,51 @@ export function useGameState({
         reward: 60,
         status: completedMissions.gravityWell ? 'completed' : 'active',
       },
+      {
+        id: 'destroyer',
+        title: '宇宙の破壊者',
+        description: '3回の衝突イベントを発生させる。',
+        progress: Math.min(1, collisionCount / 3),
+        goalText: `${collisionCount}/3 衝突`,
+        reward: 90,
+        status: completedMissions.destroyer ? 'completed' : 'active',
+      },
+      {
+        id: 'crowded',
+        title: '過密軌道マスター',
+        description: '12個以上の天体を同時に軌道上に配置。',
+        progress: Math.min(1, maxPlanetCount / 12),
+        goalText: `${maxPlanetCount}/12 天体`,
+        reward: 100,
+        status: completedMissions.crowded ? 'completed' : 'active',
+      },
+      {
+        id: 'explorer',
+        title: '宇宙探検家',
+        description: '2分間シミュレーションを観察し続ける。',
+        progress: Math.min(1, playTimeSeconds / 120),
+        goalText: `${playTimeSeconds}s / 120s`,
+        reward: 60,
+        status: completedMissions.explorer ? 'completed' : 'active',
+      },
+      {
+        id: 'observer',
+        title: '観測者',
+        description: 'ズームイン(2x+)とズームアウト(0.3x以下)を両方使用。',
+        progress: (zoomedIn ? 0.5 : 0) + (zoomedOut ? 0.5 : 0),
+        goalText: `${zoomedIn ? '✓' : '×'}拡大 ${zoomedOut ? '✓' : '×'}縮小`,
+        reward: 40,
+        status: completedMissions.observer ? 'completed' : 'active',
+      },
+      {
+        id: 'architect',
+        title: '銀河アーキテクト',
+        description: '5つの新しい惑星を追加して独自の銀河を設計。',
+        progress: Math.min(1, customPlanetsPlaced / 5),
+        goalText: `${customPlanetsPlaced}/5 追加`,
+        reward: 150,
+        status: completedMissions.architect ? 'completed' : 'active',
+      },
     ];
   }, [
     stabilitySeconds,
@@ -234,6 +331,11 @@ export function useGameState({
     timeControl.timeScale,
     physicsQuantities,
     completedMissions,
+    collisionCount,
+    maxPlanetCount,
+    playTimeSeconds,
+    zoomedIn,
+    zoomedOut,
   ]);
 
   return {

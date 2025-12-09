@@ -338,3 +338,257 @@ body {
     padding-top: 12px;
   }
 }
+
+/* Tutorial Modal Styles */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: opacity 0.2s ease;
+  backdrop-filter: blur(5px);
+}
+
+.tutorial-modal {
+  max-width: 480px;
+  width: 90%;
+  padding: 32px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.tutorial-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.tutorial-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.tutorial-content {
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 24px;
+  white-space: pre-line;
+}
+
+.tutorial-content p {
+  margin: 8px 0;
+}
+
+.tutorial-progress {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.tutorial-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tutorial-dot:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.tutorial-dot.active {
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.tutorial-dot.completed {
+  background: var(--success);
+}
+
+.tutorial-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.tutorial-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.tutorial-btn.primary {
+  background: linear-gradient(90deg, #1f8ff0, #63ffe2);
+  color: #051726;
+}
+
+.tutorial-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(99, 255, 226, 0.35);
+}
+
+.tutorial-btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+}
+
+.tutorial-btn.secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tutorial-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tutorial-skip {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 8px;
+}
+
+.tutorial-skip:hover {
+  color: var(--text);
+}
+
+/* Help Button Styles */
+.help-btn {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1f8ff0, #63ffe2);
+  border: none;
+  color: #051726;
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 5;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(99, 255, 226, 0.3);
+}
+
+.help-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 30px rgba(99, 255, 226, 0.5);
+}
+
+/* Keyboard shortcuts hint */
+.keyboard-hint {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.keyboard-hint kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 0 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+/* Scenario Selector Styles */
+.scenario-selector {
+  margin-top: 8px;
+}
+
+.scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.scenario-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 70px;
+}
+
+.scenario-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.scenario-card.active {
+  background: rgba(124, 243, 255, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 15px rgba(124, 243, 255, 0.2);
+}
+
+.scenario-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.scenario-name {
+  font-size: 11px;
+  color: var(--text);
+  text-align: center;
+}
+
+/* Planet Info Tooltip Styles */
+.planet-tooltip {
+  position: fixed;
+  z-index: 100;
+  padding: 12px;
+  max-width: 250px;
+  pointer-events: none;
+}
+
+.planet-tooltip h5 {
+  margin: 0 0 8px 0;
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.planet-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.planet-tooltip-row .label {
+  color: var(--muted);
+}
+
+.planet-tooltip-row .value {
+  color: var(--text);
+  font-weight: 600;
+}

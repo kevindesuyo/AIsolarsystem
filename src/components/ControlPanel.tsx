@@ -4,6 +4,8 @@ import TimeControlPanel from './TimeControlPanel';
 import ViewControlPanel from './ViewControlPanel';
 import SimulationParamsPanel from './SimulationParamsPanel';
 import PlanetListPanel from './PlanetListPanel';
+import ScenarioSelector from './ScenarioSelector';
+import { ScenarioPreset } from '../data/scenarios';
 
 // Define props type for ControlPanel
 type ControlPanelProps = {
@@ -25,6 +27,7 @@ type ControlPanelProps = {
   onRemovePlanet: (planetId: string) => void; // Use ID
   onUpdatePlanetParams: (targetId: string, updatedParams: Partial<EditablePlanetParams>) => void; // Use ID
   selectPlanetForPrediction: (id: string | null) => void; // Add prediction selection function
+  onLoadScenario: (scenario: ScenarioPreset) => void;
 };
 
 // Main Control Panel Component
@@ -32,11 +35,13 @@ function ControlPanel({
   timeControl, simulationParams, viewParams, planets,
   onSlowDown, onSpeedUp, onPause, onResume, onReset, onFullReset,
   onGravityChange, onSunMassChange, onZoomChange, onCameraTargetChange,
-  onAddPlanet, onRemovePlanet, onUpdatePlanetParams, selectPlanetForPrediction // Add selectPlanetForPrediction here
+  onAddPlanet, onRemovePlanet, onUpdatePlanetParams, selectPlanetForPrediction,
+  onLoadScenario
 }: ControlPanelProps) {
 
   // State to track which planet ID is selected for prediction
   const [predictingPlanetId, setPredictingPlanetId] = useState<string | null>(null);
+  const [currentScenarioId, setCurrentScenarioId] = useState<string>('default');
 
   // Wrapper function to update local state and call the prop function
   const handleSelectPrediction = (id: string | null) => {
@@ -44,8 +49,21 @@ function ControlPanel({
     selectPlanetForPrediction(id);
   };
 
+  const handleScenarioSelect = (scenario: ScenarioPreset) => {
+    setCurrentScenarioId(scenario.id);
+    onLoadScenario(scenario);
+  };
+
   return (
     <div className="control-panel glass-panel">
+      {/* Scenario Selection */}
+      <ScenarioSelector
+        onSelectScenario={handleScenarioSelect}
+        currentScenarioId={currentScenarioId}
+      />
+
+      <hr />
+
       {/* Time Controls */}
       <TimeControlPanel
         timeControl={timeControl}

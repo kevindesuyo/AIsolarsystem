@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import './App.css';
 import ControlPanel from './components/ControlPanel';
 import PhysicsPanel from './components/PhysicsPanel';
@@ -8,7 +8,12 @@ import GameHud from './components/GameHud';
 import MissionBoard from './components/MissionBoard';
 import EventFeed from './components/EventFeed';
 import { useGameState } from './hooks/useGameState';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import TutorialModal from './components/TutorialModal';
 import { EditablePlanetParams } from './types';
+
+// Check if tutorial has been shown before
+const TUTORIAL_SHOWN_KEY = 'solarops_tutorial_shown';
 
 function App() {
   // Correctly type the canvas ref
@@ -16,6 +21,12 @@ function App() {
   
   // Physics panel visibility state
   const [showPhysicsPanel, setShowPhysicsPanel] = useState(false);
+  
+  // Tutorial modal state
+  const [showTutorial, setShowTutorial] = useState(() => {
+    // Show tutorial on first visit
+    return !localStorage.getItem(TUTORIAL_SHOWN_KEY);
+  });
 
   // Remove the duplicated old destructuring
   const {
@@ -40,6 +51,7 @@ function App() {
     onUpdatePlanetParams, // Use the new update function
     onUpdatePlanetPosition, // Get the drag and drop function
     selectPlanetForPrediction, // Get the prediction selection function
+    loadScenario, // Get the scenario loading function
     collisionEvents,
     lastCollisionTime,
   } = useSimulation(canvasRef);
@@ -68,6 +80,40 @@ function App() {
     collisionEvents,
     lastCollisionTime,
     physicsQuantities,
+    zoom: viewParams.zoom,
+  });
+
+  // Handle tutorial close
+  const handleTutorialClose = useCallback(() => {
+    setShowTutorial(false);
+    localStorage.setItem(TUTORIAL_SHOWN_KEY, 'true');
+  }, []);
+
+  // Toggle help/tutorial
+  const toggleHelp = useCallback(() => {
+    setShowTutorial(prev => !prev);
+  }, []);
+
+  // Zoom handlers for keyboard shortcuts
+  const handleZoomIn = useCallback(() => {
+    onZoomChange(viewParams.zoom * 1.2);
+  }, [viewParams.zoom, onZoomChange]);
+
+  const handleZoomOut = useCallback(() => {
+    onZoomChange(viewParams.zoom * 0.8);
+  }, [viewParams.zoom, onZoomChange]);
+
+  // Set up keyboard shortcuts
+  useKeyboardShortcuts({
+    onPause: pause,
+    onResume: resume,
+    onSpeedUp: speedUp,
+    onSlowDown: slowDown,
+    onReset: reset,
+    onZoomIn: handleZoomIn,
+    onZoomOut: handleZoomOut,
+    onToggleHelp: toggleHelp,
+    isRunning: timeControl.isRunning,
   });
 
   // Wrap control handlers to also update game state
@@ -124,7 +170,8 @@ function App() {
         onAddPlanet={handleAddPlanet}
         onRemovePlanet={handleRemovePlanet}
         onUpdatePlanetParams={onUpdatePlanetParams}
-        selectPlanetForPrediction={selectPlanetForPrediction} // Pass the function down
+        selectPlanetForPrediction={selectPlanetForPrediction}
+        onLoadScenario={loadScenario}
       />
 
       <MissionBoard missions={missions} />
@@ -144,6 +191,26 @@ function App() {
           isVisible={showPhysicsPanel}
           onToggleVisibility={() => setShowPhysicsPanel(!showPhysicsPanel)}
         />
+      )}
+
+      {/* Help Button */}
+      <button 
+        className="help-btn" 
+        onClick={toggleHelp}
+        aria-label="ヘルプを表示"
+        title="ヘルプ (H)"
+      >
+        ?
+      </button>
+
+      {/* Keyboard shortcuts hint */}
+      <div className="keyboard-hint glass-panel">
+        <kbd>Space</kbd> 一時停止 | <kbd>+/-</kbd> 速度 | <kbd>Z/X</kbd> ズーム | <kbd>H</kbd> ヘルプ
+      </div>
+
+      {/* Tutorial Modal */}
+      {showTutorial && (
+        <TutorialModal onClose={handleTutorialClose} />
       )}
     </div>
   );

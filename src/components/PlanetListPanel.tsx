@@ -18,7 +18,7 @@ const PlanetListPanel = React.memo<PlanetListPanelProps>(({
   onPredict,
 }) => {
   const [newPlanetParams, setNewPlanetParams] = useState<EditablePlanetParams>({
-    name: 'NewPlanet',
+    name: '',
     type: 'rocky',
     radius: 5,
     color: 'white',
@@ -29,16 +29,32 @@ const PlanetListPanel = React.memo<PlanetListPanelProps>(({
   });
 
   const handleAddPlanet = () => {
+    const autoName = newPlanetParams.name.trim() || `Planet_${planets.length + 1}`;
     const paramsToAdd: EditablePlanetParams = {
       ...newPlanetParams,
+      name: autoName,
       texturePath: newPlanetParams.texturePath || undefined,
     };
     onAddPlanet(paramsToAdd);
     setNewPlanetParams(prev => ({
       ...prev,
-      name: `NewPlanet_${Date.now()}`,  // Use timestamp to avoid duplicate names
+      name: '',
       texturePath: '',
     }));
+  };
+
+  const handleQuickAdd = () => {
+    const quickParams: EditablePlanetParams = {
+      name: `Planet_${planets.length + 1}`,
+      type: planetTypes[Math.floor(Math.random() * planetTypes.length)],
+      radius: 5,
+      color: 'white',
+      texturePath: undefined,
+      mass: 1,
+      initialOrbitalRadius: Math.max(10, 120 + planets.length * 20),
+      rotationSpeed: 0.01,
+    };
+    onAddPlanet(quickParams);
   };
 
   return (
@@ -59,7 +75,11 @@ const PlanetListPanel = React.memo<PlanetListPanelProps>(({
 
       <div style={{ border: '1px dashed gray', margin: '5px', padding: '5px' }}>
         <h5>新しい惑星を追加</h5>
-        <div>名前: <input value={newPlanetParams.name} onChange={e => setNewPlanetParams({ ...newPlanetParams, name: e.target.value })} /></div>
+        <div style={{ marginBottom: '6px' }}>
+          <button onClick={handleQuickAdd}>おまかせ追加</button>
+          <span style={{ marginLeft: '8px', fontSize: '0.9em' }}>基本設定で自動命名します</span>
+        </div>
+        <div>名前(空欄なら自動付与): <input placeholder="自動で名前がつきます" value={newPlanetParams.name} onChange={e => setNewPlanetParams({ ...newPlanetParams, name: e.target.value })} /></div>
         <div>種類:
           <select value={newPlanetParams.type} onChange={e => setNewPlanetParams({ ...newPlanetParams, type: e.target.value as Planet['type'] })}>
             {planetTypes.map(type => <option key={type} value={type}>{type}</option>)}
